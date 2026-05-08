@@ -23,6 +23,34 @@ func TestPhase2Smoke(t *testing.T) {
 	}
 }
 
+func TestPhase5Smoke(t *testing.T) {
+	src := `classDiagram
+class Animal {
++name : string
++eat() void
+}
+class Dog
+class Cat
+Animal <|-- Dog
+Animal <|-- Cat
+Dog *-- Bone
+Cat o-- Toy
+`
+	dl, err := ParseAndLayout(src, LayoutOptions{})
+	if err != nil {
+		t.Fatalf("ParseAndLayout: %v", err)
+	}
+	classBoxes := 0
+	for _, it := range dl.Items {
+		if s, ok := it.(displaylist.Shape); ok && s.Role == displaylist.RoleClassBox {
+			classBoxes++
+		}
+	}
+	if classBoxes < 5 {
+		t.Fatalf("expected >=5 class boxes, got %d", classBoxes)
+	}
+}
+
 func TestPhase4Smoke(t *testing.T) {
 	src := `sequenceDiagram
 participant A as Alice

@@ -1,6 +1,7 @@
 package mermaid
 
 import (
+	"github.com/luo-studio/go-mermaid/class"
 	"github.com/luo-studio/go-mermaid/displaylist"
 	"github.com/luo-studio/go-mermaid/flowchart"
 	"github.com/luo-studio/go-mermaid/sequence"
@@ -23,9 +24,11 @@ func runSequence(src string, opts LayoutOptions) (*displaylist.DisplayList, erro
 }
 
 func runClass(src string, opts LayoutOptions) (*displaylist.DisplayList, error) {
-	_ = src
-	_ = opts
-	return nil, ErrNotImplemented
+	ast, err := class.Parse(src)
+	if err != nil {
+		return nil, err
+	}
+	return class.Layout(ast, opts), nil
 }
 
 func runER(src string, opts LayoutOptions) (*displaylist.DisplayList, error) {

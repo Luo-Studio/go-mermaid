@@ -64,8 +64,18 @@ func TestParseAndLayoutSequence(t *testing.T) {
 	}
 }
 
-func TestParseAndLayoutClassUnimplemented(t *testing.T) {
-	_, err := ParseAndLayout("classDiagram\nA --|> B\n", LayoutOptions{})
+func TestParseAndLayoutClass(t *testing.T) {
+	dl, err := ParseAndLayout("classDiagram\nclass A\nclass B\nA <|-- B\n", LayoutOptions{})
+	if err != nil {
+		t.Fatalf("ParseAndLayout: %v", err)
+	}
+	if dl == nil || len(dl.Items) == 0 {
+		t.Fatal("expected non-empty DisplayList for class")
+	}
+}
+
+func TestParseAndLayoutERUnimplemented(t *testing.T) {
+	_, err := ParseAndLayout("erDiagram\nA ||--o{ B : has\n", LayoutOptions{})
 	if !errors.Is(err, ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented, got %v", err)
 	}
