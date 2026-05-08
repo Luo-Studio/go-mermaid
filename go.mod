@@ -16,7 +16,7 @@ require (
 	github.com/BurntSushi/xgbutil v0.0.0-20190907113008-ad855c713046 // indirect
 	github.com/ByteArena/poly2tri-go v0.0.0-20170716161910-d102ad91854f // indirect
 	github.com/Kagami/go-avif v0.1.0 // indirect
-	github.com/Luo-Studio/autog v0.0.0-20260508201329-fa3c7bce29a9 // indirect
+	github.com/Luo-Studio/autog v0.0.0-20260508203614-f636a4d3219d // indirect
 	github.com/andybalholm/brotli v1.2.1 // indirect
 	github.com/benoitkugler/textlayout v0.3.2 // indirect
 	github.com/benoitkugler/textprocessing v0.0.6 // indirect

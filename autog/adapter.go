@@ -229,6 +229,17 @@ func Layout(in Input) (out Output, err error) {
 	// coordinates of nodes and edge points in-place.
 	transformDirection(in.Direction, &out, maxX, maxY)
 
+	// Centre-align rank siblings. In LR/RL after rotation, all nodes
+	// in a TB layer end up sharing the same X (the layer's autog
+	// Y), but their widths differ — so their centres drift apart
+	// even though their left edges line up. autog's BrandesKoepf
+	// places blocks by left edge for spacing reasons; this pass
+	// shifts each node so its centre matches its rank's widest
+	// node, which is the look Mermaid.js / Graphviz dot produce.
+	if in.Direction == DirectionLR || in.Direction == DirectionRL {
+		alignRankCentersByX(&out)
+	}
+
 
 	out.Width = out.Width + in.Padding*2
 	out.Height = out.Height + in.Padding*2
@@ -245,6 +256,75 @@ func Layout(in Input) (out Output, err error) {
 		}
 	}
 	return out, nil
+}
+
+// alignRankCentersByX groups nodes by their post-rotation X
+// coordinate (which corresponds to their pre-rotation layer Y in
+// LR/RL) and shifts each node so its horizontal centre aligns with
+// the rank's widest node's centre. Without this, nodes in the same
+// rank end up left-edge-aligned with widths varying, which makes
+// edges between vertically-stacked siblings look slanted.
+//
+// Edge points that connect to a shifted node are shifted by the
+// same delta so the edge stays anchored to the node's edge anchor
+// (where autog placed it).
+func alignRankCentersByX(out *Output) {
+	type nodeRef struct {
+		idx int
+		w   float64
+	}
+	groups := map[float64][]nodeRef{}
+	for i, n := range out.Nodes {
+		groups[n.X] = append(groups[n.X], nodeRef{idx: i, w: n.Width})
+	}
+	deltas := make(map[string]float64, len(out.Nodes))
+	for x, nodes := range groups {
+		if len(nodes) < 2 {
+			continue
+		}
+		var maxW float64
+		for _, n := range nodes {
+			if n.w > maxW {
+				maxW = n.w
+			}
+		}
+		centerX := x + maxW/2
+		for _, n := range nodes {
+			oldX := out.Nodes[n.idx].X
+			newX := centerX - n.w/2
+			if d := newX - oldX; d != 0 {
+				deltas[out.Nodes[n.idx].ID] = d
+				out.Nodes[n.idx].X = newX
+			}
+		}
+	}
+	if len(deltas) == 0 {
+		return
+	}
+	// Shift edge endpoints by the same X delta as their source /
+	// target node. autog returns edges in source-to-target order
+	// (P0 at the source anchor, last point at the target anchor),
+	// so applying the source delta to the first half of the
+	// polyline and the target delta to the second half keeps the
+	// edge attached at both ends. We split at the midpoint of the
+	// polyline length.
+	for i := range out.Edges {
+		e := &out.Edges[i]
+		srcD, srcOk := deltas[e.FromID]
+		tgtD, tgtOk := deltas[e.ToID]
+		if !srcOk && !tgtOk {
+			continue
+		}
+		n := len(e.Points)
+		mid := n / 2
+		for j := range e.Points {
+			if j < mid && srcOk {
+				e.Points[j][0] += srcD
+			} else if j >= mid && tgtOk {
+				e.Points[j][0] += tgtD
+			}
+		}
+	}
 }
 
 // bboxOf returns the (width, height) bounding all positioned nodes
