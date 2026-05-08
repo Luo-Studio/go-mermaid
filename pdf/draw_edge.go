@@ -97,5 +97,41 @@ func drawArrow(pdf *fpdf.Fpdf, tip, behind displaylist.Point, kind displaylist.M
 		pdf.Line(tx1+px*s-ux*s, ty1+py*s-uy*s, tx1-px*s+ux*s, ty1-py*s+uy*s)
 	case displaylist.MarkerCircleOpen:
 		pdf.Ellipse(tx1-ux*size*0.5, ty1-uy*size*0.5, size*0.4, size*0.4, 0, "D")
+	case displaylist.MarkerCardinalityOne:
+		drawCardOne(pdf, tx1, ty1, ux, uy, px, py, size)
+	case displaylist.MarkerCardinalityZeroOrOne:
+		drawCardOne(pdf, tx1, ty1, ux, uy, px, py, size)
+		cx := tx1 - ux*size*1.6
+		cy := ty1 - uy*size*1.6
+		pdf.Ellipse(cx, cy, size*0.35, size*0.35, 0, "D")
+	case displaylist.MarkerCardinalityOneOrMore:
+		drawCardOne(pdf, tx1, ty1, ux, uy, px, py, size)
+		drawCrowsFoot(pdf, tx1, ty1, ux, uy, px, py, size)
+	case displaylist.MarkerCardinalityZeroOrMore:
+		cx := tx1 - ux*size*1.6
+		cy := ty1 - uy*size*1.6
+		pdf.Ellipse(cx, cy, size*0.35, size*0.35, 0, "D")
+		drawCrowsFoot(pdf, tx1, ty1, ux, uy, px, py, size)
+	}
+}
+
+// drawCardOne renders a single short tick across the line, used for
+// the ER cardinality `||` (exactly one) glyph and as the inner half
+// of `|o`/`}|` glyphs.
+func drawCardOne(pdf *fpdf.Fpdf, tx1, ty1, ux, uy, px, py, size float64) {
+	bx := tx1 - ux*size*0.7
+	by := ty1 - uy*size*0.7
+	pdf.Line(bx+px*size*0.5, by+py*size*0.5, bx-px*size*0.5, by-py*size*0.5)
+}
+
+// drawCrowsFoot draws three short lines fanning back from the tip,
+// the "many" half of ER cardinality glyphs.
+func drawCrowsFoot(pdf *fpdf.Fpdf, tx1, ty1, ux, uy, px, py, size float64) {
+	for _, off := range []float64{-0.55, 0.0, 0.55} {
+		// End point: angled away from the line by `off` perpendicular
+		// units and `size` along the line.
+		endX := tx1 - ux*size + px*off*size
+		endY := ty1 - uy*size + py*off*size
+		pdf.Line(tx1, ty1, endX, endY)
 	}
 }

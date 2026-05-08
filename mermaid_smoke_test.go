@@ -23,6 +23,27 @@ func TestPhase2Smoke(t *testing.T) {
 	}
 }
 
+func TestPhase6Smoke(t *testing.T) {
+	src := `erDiagram
+CUSTOMER ||--o{ ORDER : places
+CUSTOMER {
+string name
+int id PK
+}
+ORDER {
+int id PK
+int customer_id FK
+}
+`
+	dl, err := ParseAndLayout(src, LayoutOptions{})
+	if err != nil {
+		t.Fatalf("ParseAndLayout: %v", err)
+	}
+	if dl.Width <= 0 {
+		t.Fatalf("empty bbox")
+	}
+}
+
 func TestPhase5Smoke(t *testing.T) {
 	src := `classDiagram
 class Animal {
