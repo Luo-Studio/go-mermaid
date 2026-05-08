@@ -1,6 +1,8 @@
 package flowchart
 
 import (
+	"math"
+
 	"github.com/luo-studio/go-mermaid/autog"
 	"github.com/luo-studio/go-mermaid/displaylist"
 	"github.com/luo-studio/go-mermaid/internal/textutil"
@@ -143,6 +145,25 @@ func emitNodes(dl *displaylist.DisplayList, nodes []autog.Node, d *Diagram) {
 var splitLabelLines = textutil.SplitLabelLines
 
 func emitEdges(dl *displaylist.DisplayList, edges []autog.Edge, d *Diagram) {
+	// Detect "anti-parallel" pairs (an edge from A→B with another B→A
+	// in the same diagram) so we can offset their labels on opposite
+	// sides of the line instead of stacking them at the same midpoint.
+	pairKey := func(a, b string) string {
+		if a < b {
+			return a + "→" + b
+		}
+		return b + "→" + a
+	}
+	hasReverse := map[string]bool{}
+	seen := map[string]bool{}
+	for _, e := range edges {
+		k := pairKey(e.FromID, e.ToID)
+		if seen[k] {
+			hasReverse[k] = true
+		}
+		seen[k] = true
+	}
+
 	for _, e := range edges {
 		ast := findEdge(d, e.FromID, e.ToID)
 		points := make([]displaylist.Point, 0, len(e.Points))
@@ -157,15 +178,69 @@ func emitEdges(dl *displaylist.DisplayList, edges []autog.Edge, d *Diagram) {
 			Role:       displaylist.RoleEdge,
 		})
 		if ast.Label != "" && len(points) > 0 {
+			// For anti-parallel pairs, force the side based on edge
+			// direction (lex order of endpoint IDs) so the two edges
+			// always pick opposite sides — independent of polyline
+			// shape, which can be near-coincident for the two halves
+			// of a pair.
+			forceSide := 0
+			if hasReverse[pairKey(e.FromID, e.ToID)] {
+				if e.FromID < e.ToID {
+					forceSide = 1
+				} else {
+					forceSide = -1
+				}
+			}
+			pos, valign := edgeLabelPos(points, forceSide)
 			dl.Items = append(dl.Items, displaylist.Text{
-				Pos:    midpoint(points),
+				Pos:    pos,
 				Lines:  splitLabelLines(ast.Label),
 				Align:  displaylist.AlignCenter,
-				VAlign: displaylist.VAlignMiddle,
+				VAlign: valign,
 				Role:   displaylist.RoleEdgeLabel,
 			})
 		}
 	}
+}
+
+// edgeLabelPos returns the position to anchor an edge label and the
+// vertical anchor that places it just off the polyline. The label is
+// pushed perpendicular to the mid-segment so two anti-parallel edges
+// (a bidirectional pair) get their labels on opposite sides of the
+// shared line instead of overlapping at the midpoint.
+//
+// forceSide overrides the auto-pick when nonzero: +1 forces the
+// label onto the perpendicular's positive side, -1 onto the
+// negative. Used by emitEdges for anti-parallel pairs where polyline
+// shapes may be near-identical and the auto-pick could land both on
+// the same side.
+func edgeLabelPos(pts []displaylist.Point, forceSide int) (displaylist.Point, displaylist.VAlign) {
+	mid := midpoint(pts)
+	if len(pts) < 2 {
+		return mid, displaylist.VAlignBottom
+	}
+	const labelOffset = 3.5 // mm perpendicular to the line
+	i := len(pts) / 2
+	a, b := pts[i-1], pts[i]
+	dx, dy := b.X-a.X, b.Y-a.Y
+	length := math.Hypot(dx, dy)
+	if length < 0.001 {
+		return mid, displaylist.VAlignBottom
+	}
+	// Perpendicular unit (rotated 90° CCW in y-down screen space).
+	px, py := -dy/length, dx/length
+	side := 1.0
+	if forceSide < 0 {
+		side = -1.0
+	}
+	pos := displaylist.Point{
+		X: mid.X + px*labelOffset*side,
+		Y: mid.Y + py*labelOffset*side,
+	}
+	if py*side < 0 {
+		return pos, displaylist.VAlignBottom
+	}
+	return pos, displaylist.VAlignTop
 }
 
 func autogDir(d Direction) autog.Direction {
