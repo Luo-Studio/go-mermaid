@@ -39,6 +39,13 @@ func drawText(pdf *fpdf.Fpdf, t displaylist.Text, tx func(displaylist.Point) (fl
 
 	emojiAvailable := emojiFont != ""
 
+	// Edge labels (and similar overlay text on top of lines) get a
+	// white fill behind them so an arrow passing through doesn't make
+	// the text unreadable. The fill colour is the page background;
+	// for now hardcode white — themes that need a tinted background
+	// can override per-Role styling later.
+	overlayBackground := t.Role == displaylist.RoleEdgeLabel || t.Role == displaylist.RoleMessageLabel
+
 	// measureRuns returns the total rendered width of runs by
 	// switching fonts before each GetStringWidth call.
 	measureRuns := func(runs []textRun) float64 {
@@ -95,6 +102,18 @@ func drawText(pdf *fpdf.Fpdf, t displaylist.Text, tx func(displaylist.Point) (fl
 		// computed for pdf.Text (baseline-positioned). Convert back
 		// to top-left by subtracting the ascent portion (≈0.7*lineH).
 		topY := startY + float64(i)*lineH - lineH*0.7
+
+		if overlayBackground {
+			// Paint a white rect behind the line to mask any edge or
+			// arrowhead passing through. Slight horizontal padding so
+			// the mask covers ascenders/descenders without touching
+			// the next character.
+			savedFillR, savedFillG, savedFillB := pdf.GetFillColor()
+			pdf.SetFillColor(255, 255, 255)
+			pdf.Rect(lx-0.5, topY, w+1.0, lineH, "F")
+			pdf.SetFillColor(savedFillR, savedFillG, savedFillB)
+		}
+
 		// Save the cell margin and zero it so text runs sit flush —
 		// fpdf's default cell margin would add an asymmetric pad.
 		savedMargin := pdf.GetCellMargin()
