@@ -301,28 +301,32 @@ func alignRankCentersByX(out *Output) {
 	if len(deltas) == 0 {
 		return
 	}
-	// Shift edge endpoints by the same X delta as their source /
-	// target node. autog returns edges in source-to-target order
-	// (P0 at the source anchor, last point at the target anchor),
-	// so applying the source delta to the first half of the
-	// polyline and the target delta to the second half keeps the
-	// edge attached at both ends. We split at the midpoint of the
-	// polyline length.
+	// Shift edge points so the curve stays attached to its source
+	// and target after the alignment shift. autog returns edges in
+	// source-to-target order (P0 at the source anchor, last point
+	// at the target anchor); linearly interpolating each point's
+	// shift between srcD and tgtD gives every Bézier control point
+	// a proportional shift that preserves the curve shape. A
+	// hard split at the midpoint instead introduces a kink when
+	// srcD != tgtD (e.g., the source's rank is unshifted but the
+	// target's rank is shifted) — the curve bends visibly because
+	// the control point on the source side jumps to one delta
+	// while its neighbour on the target side jumps to another.
 	for i := range out.Edges {
 		e := &out.Edges[i]
-		srcD, srcOk := deltas[e.FromID]
-		tgtD, tgtOk := deltas[e.ToID]
-		if !srcOk && !tgtOk {
+		srcD := deltas[e.FromID]
+		tgtD := deltas[e.ToID]
+		if srcD == 0 && tgtD == 0 {
 			continue
 		}
 		n := len(e.Points)
-		mid := n / 2
+		if n < 2 {
+			continue
+		}
+		denom := float64(n - 1)
 		for j := range e.Points {
-			if j < mid && srcOk {
-				e.Points[j][0] += srcD
-			} else if j >= mid && tgtOk {
-				e.Points[j][0] += tgtD
-			}
+			t := float64(j) / denom
+			e.Points[j][0] += srcD*(1-t) + tgtD*t
 		}
 	}
 }
