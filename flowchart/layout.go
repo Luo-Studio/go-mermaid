@@ -204,28 +204,28 @@ func emitEdges(dl *displaylist.DisplayList, edges []autog.Edge, d *Diagram) {
 }
 
 // edgeLabelPos returns the position to anchor an edge label and the
-// vertical anchor that places it just off the polyline. The label is
-// pushed perpendicular to the mid-segment so two anti-parallel edges
-// (a bidirectional pair) get their labels on opposite sides of the
-// shared line instead of overlapping at the midpoint.
+// vertical anchor.
 //
-// forceSide overrides the auto-pick when nonzero: +1 forces the
-// label onto the perpendicular's positive side, -1 onto the
-// negative. Used by emitEdges for anti-parallel pairs where polyline
-// shapes may be near-identical and the auto-pick could land both on
-// the same side.
+// For single (non-anti-parallel) edges, forceSide==0: the label sits
+// right at the midpoint, vertically centred on the line — looks
+// natural for the typical flowchart edge.
+//
+// For an anti-parallel pair (bidirectional edges between the same
+// two nodes), the caller passes forceSide=+1 / -1 so each edge of
+// the pair lands on a different perpendicular side of the shared
+// midpoint and the labels don't overlap.
 func edgeLabelPos(pts []displaylist.Point, forceSide int) (displaylist.Point, displaylist.VAlign) {
 	mid := midpoint(pts)
-	if len(pts) < 2 {
-		return mid, displaylist.VAlignBottom
+	if forceSide == 0 || len(pts) < 2 {
+		return mid, displaylist.VAlignMiddle
 	}
-	const labelOffset = 3.5 // mm perpendicular to the line
+	const labelOffset = 4.5 // mm perpendicular to the line — large enough to clear ~4 mm tall text on the opposite side
 	i := len(pts) / 2
 	a, b := pts[i-1], pts[i]
 	dx, dy := b.X-a.X, b.Y-a.Y
 	length := math.Hypot(dx, dy)
 	if length < 0.001 {
-		return mid, displaylist.VAlignBottom
+		return mid, displaylist.VAlignMiddle
 	}
 	// Perpendicular unit (rotated 90° CCW in y-down screen space).
 	px, py := -dy/length, dx/length
@@ -284,12 +284,47 @@ func findEdge(d *Diagram, from, to string) Edge {
 }
 
 func midpoint(pts []displaylist.Point) displaylist.Point {
+	return pointAt(pts, 0.5)
+}
+
+// pointAt returns the position at fraction t along the polyline,
+// where t=0 is the first point and t=1 is the last. Used to place
+// edge labels off-centre when sharing an endpoint with sibling
+// edges would otherwise stack labels on top of each other.
+func pointAt(pts []displaylist.Point, t float64) displaylist.Point {
 	if len(pts) == 0 {
 		return displaylist.Point{}
 	}
 	if len(pts) == 1 {
 		return pts[0]
 	}
-	mid := len(pts) / 2
-	return displaylist.Point{X: (pts[mid-1].X + pts[mid].X) / 2, Y: (pts[mid-1].Y + pts[mid].Y) / 2}
+	// Walk the polyline measuring length to find the segment that
+	// contains length*t.
+	totalLen := 0.0
+	segLens := make([]float64, len(pts)-1)
+	for i := range segLens {
+		dx := pts[i+1].X - pts[i].X
+		dy := pts[i+1].Y - pts[i].Y
+		segLens[i] = math.Hypot(dx, dy)
+		totalLen += segLens[i]
+	}
+	if totalLen <= 0 {
+		return pts[0]
+	}
+	target := totalLen * t
+	walked := 0.0
+	for i, sl := range segLens {
+		if walked+sl >= target || i == len(segLens)-1 {
+			f := 0.0
+			if sl > 0 {
+				f = (target - walked) / sl
+			}
+			return displaylist.Point{
+				X: pts[i].X + (pts[i+1].X-pts[i].X)*f,
+				Y: pts[i].Y + (pts[i+1].Y-pts[i].Y)*f,
+			}
+		}
+		walked += sl
+	}
+	return pts[len(pts)-1]
 }
