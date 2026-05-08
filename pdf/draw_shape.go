@@ -57,6 +57,22 @@ func drawShape(pdf *fpdf.Fpdf, s displaylist.Shape, tr func(displaylist.Rect) (f
 		pdf.Rect(x, y+ry, w, h-ry*2, fillStyle)
 		pdf.Ellipse(x+w/2, y+ry, w/2, ry, 0, fillStyle)
 		pdf.Ellipse(x+w/2, y+h-ry, w/2, ry, 0, fillStyle)
+	case displaylist.ShapeKindStateBullet:
+		cx, cy := x+w/2, y+h/2
+		r := w / 3
+		if rs.StrokeR >= 0 {
+			pdf.SetFillColor(int(rs.StrokeR), int(rs.StrokeG), int(rs.StrokeB))
+		}
+		pdf.Ellipse(cx, cy, r, r, 0, "F")
+	case displaylist.ShapeKindStateBullseye:
+		cx, cy := x+w/2, y+h/2
+		rOuter := w / 2.2
+		rInner := w / 4
+		pdf.Ellipse(cx, cy, rOuter, rOuter, 0, "D")
+		if rs.StrokeR >= 0 {
+			pdf.SetFillColor(int(rs.StrokeR), int(rs.StrokeG), int(rs.StrokeB))
+		}
+		pdf.Ellipse(cx, cy, rInner, rInner, 0, "F")
 	case displaylist.ShapeKindCustom:
 		if len(s.Path) < 3 {
 			return

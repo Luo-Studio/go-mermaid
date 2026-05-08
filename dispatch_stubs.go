@@ -6,6 +6,7 @@ import (
 	"github.com/luo-studio/go-mermaid/er"
 	"github.com/luo-studio/go-mermaid/flowchart"
 	"github.com/luo-studio/go-mermaid/sequence"
+	"github.com/luo-studio/go-mermaid/state"
 )
 
 func runFlowchart(src string, opts LayoutOptions) (*displaylist.DisplayList, error) {
@@ -41,7 +42,9 @@ func runER(src string, opts LayoutOptions) (*displaylist.DisplayList, error) {
 }
 
 func runState(src string, opts LayoutOptions) (*displaylist.DisplayList, error) {
-	_ = src
-	_ = opts
-	return nil, ErrNotImplemented
+	ast, err := state.Parse(src)
+	if err != nil {
+		return nil, err
+	}
+	return state.Layout(ast, opts), nil
 }

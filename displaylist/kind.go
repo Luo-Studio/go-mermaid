@@ -24,6 +24,11 @@ const (
 	ShapeKindCylinder     ShapeKind = "cylinder"
 	ShapeKindSubroutine   ShapeKind = "subroutine"
 	ShapeKindCustom       ShapeKind = "custom"
+
+	// State-diagram pseudostates. Bullet = filled disk, Bullseye =
+	// disk inside a ring (UML "final" state).
+	ShapeKindStateBullet   ShapeKind = "stateBullet"
+	ShapeKindStateBullseye ShapeKind = "stateBullseye"
 )
 
 // LineStyle identifies the stroke style of an Edge or Cluster border.

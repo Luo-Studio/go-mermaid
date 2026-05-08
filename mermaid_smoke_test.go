@@ -23,6 +23,40 @@ func TestPhase2Smoke(t *testing.T) {
 	}
 }
 
+func TestPhase7Smoke(t *testing.T) {
+	src := `stateDiagram-v2
+[*] --> Idle
+Idle --> Running : start
+Running --> Idle : stop
+Running --> [*]
+state Running {
+Working --> Waiting : block
+Waiting --> Working : unblock
+}
+`
+	dl, err := ParseAndLayout(src, LayoutOptions{})
+	if err != nil {
+		t.Fatalf("ParseAndLayout: %v", err)
+	}
+	if dl.Width <= 0 {
+		t.Fatal("empty bbox")
+	}
+	bullet, bullseye := 0, 0
+	for _, it := range dl.Items {
+		if s, ok := it.(displaylist.Shape); ok {
+			if s.Kind == displaylist.ShapeKindStateBullet {
+				bullet++
+			}
+			if s.Kind == displaylist.ShapeKindStateBullseye {
+				bullseye++
+			}
+		}
+	}
+	if bullet < 1 || bullseye < 1 {
+		t.Fatalf("expected >=1 bullet and >=1 bullseye, got %d/%d", bullet, bullseye)
+	}
+}
+
 func TestPhase6Smoke(t *testing.T) {
 	src := `erDiagram
 CUSTOMER ||--o{ ORDER : places

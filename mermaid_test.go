@@ -84,10 +84,13 @@ func TestParseAndLayoutER(t *testing.T) {
 	}
 }
 
-func TestParseAndLayoutStateUnimplemented(t *testing.T) {
-	_, err := ParseAndLayout("stateDiagram-v2\n[*] --> S\n", LayoutOptions{})
-	if !errors.Is(err, ErrNotImplemented) {
-		t.Fatalf("expected ErrNotImplemented, got %v", err)
+func TestParseAndLayoutState(t *testing.T) {
+	dl, err := ParseAndLayout("stateDiagram-v2\n[*] --> S\nS --> [*]\n", LayoutOptions{})
+	if err != nil {
+		t.Fatalf("ParseAndLayout: %v", err)
+	}
+	if dl == nil || len(dl.Items) == 0 {
+		t.Fatal("expected non-empty DisplayList for state")
 	}
 }
 
