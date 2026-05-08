@@ -15,23 +15,27 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 	measurer := opts.ResolveMeasurer()
 	dl := &displaylist.DisplayList{}
 
+	// All constants in DisplayList units (typically mm). Sized for the
+	// default fontSize=4 layout (~5.5 mm line height); callers using
+	// pt-based units can override via SequenceActorSpacing /
+	// SequenceMessageSpacing.
 	const (
-		actorBoxH      = 30.0
-		actorPadH      = 16.0
-		messagePadY    = 24.0
-		messagePadTop  = 50.0
-		notePadX       = 8.0
-		notePadY       = 6.0
-		blockHeader    = 20.0
-		blockPadY      = 10.0
-		blockPadX      = 6.0
-		activationW    = 8.0
-		activationStep = 4.0
+		actorBoxH      = 10.0
+		actorPadH      = 6.0
+		messagePadY    = 8.0
+		messagePadTop  = 12.0
+		notePadX       = 4.0
+		notePadY       = 3.0
+		blockHeader    = 7.0
+		blockPadY      = 4.0
+		blockPadX      = 3.0
+		activationW    = 3.0
+		activationStep = 1.5
 	)
 
 	actorSpacing := opts.SequenceActorSpacing
 	if actorSpacing <= 0 {
-		actorSpacing = 30
+		actorSpacing = 12
 	}
 	messageSpacing := opts.SequenceMessageSpacing
 	if messageSpacing <= 0 {
