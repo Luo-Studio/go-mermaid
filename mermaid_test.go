@@ -54,8 +54,18 @@ func TestParseAndLayoutFlowchart(t *testing.T) {
 	}
 }
 
-func TestParseAndLayoutSequenceUnimplemented(t *testing.T) {
-	_, err := ParseAndLayout("sequenceDiagram\nA->>B: hi\n", LayoutOptions{})
+func TestParseAndLayoutSequence(t *testing.T) {
+	dl, err := ParseAndLayout("sequenceDiagram\nparticipant A\nparticipant B\nA->>B: hi\n", LayoutOptions{})
+	if err != nil {
+		t.Fatalf("ParseAndLayout: %v", err)
+	}
+	if dl == nil || len(dl.Items) == 0 {
+		t.Fatal("expected non-empty DisplayList for sequence")
+	}
+}
+
+func TestParseAndLayoutClassUnimplemented(t *testing.T) {
+	_, err := ParseAndLayout("classDiagram\nA --|> B\n", LayoutOptions{})
 	if !errors.Is(err, ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented, got %v", err)
 	}

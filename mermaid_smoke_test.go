@@ -23,6 +23,25 @@ func TestPhase2Smoke(t *testing.T) {
 	}
 }
 
+func TestPhase4Smoke(t *testing.T) {
+	src := `sequenceDiagram
+participant A as Alice
+participant B as Bob
+A->>B: Hi
+B-->>A: Hello
+loop Every minute
+A->>B: ping
+end
+`
+	dl, err := ParseAndLayout(src, LayoutOptions{})
+	if err != nil {
+		t.Fatalf("ParseAndLayout: %v", err)
+	}
+	if dl.Width <= 0 || dl.Height <= 0 {
+		t.Fatalf("bbox: %vx%v", dl.Width, dl.Height)
+	}
+}
+
 func TestPhase3Smoke(t *testing.T) {
 	src := `flowchart TB
 subgraph outer [Outer]
