@@ -6,6 +6,7 @@ package autog
 
 import (
 	"fmt"
+	"math"
 	"runtime"
 
 	upstream "github.com/nulab/autog"
@@ -127,12 +128,26 @@ func Layout(in Input) (out Output, err error) {
 		upstream.WithNodeSize(sizes),
 		upstream.WithNodeSpacing(nodeSpacing),
 		upstream.WithLayerSpacing(layerSpacing),
+		// NetworkSimplex (Graphviz Dot's algorithm) produces visibly
+		// more balanced, parent-centred-over-children layouts than the
+		// default SinkColoring or BrandesKoepf, which both bias parents
+		// toward the leftmost child for high-fan-out trees.
+		upstream.WithPositioning(upstream.PositioningNetworkSimplex),
 	)
 
 	// Determine post-layout coordinate flip for direction. autog's
 	// default is top-to-bottom; for the other directions we transform
 	// once we know the bbox.
-	maxX, maxY := 0.0, 0.0
+	//
+	// Track min as well as max — NetworkSimplex (and some other
+	// positioning algorithms) can emit negative coordinates for nodes
+	// the algorithm centres relative to siblings (e.g. a parent placed
+	// above its first child whose Y is then driven negative). If we
+	// only tracked max we'd report a too-small bbox and the renderer
+	// would draw above its claimed top-left corner — overlapping
+	// surrounding content. Shift everything so the bbox starts at (0, 0).
+	minX, minY := math.Inf(1), math.Inf(1)
+	maxX, maxY := math.Inf(-1), math.Inf(-1)
 
 	out.Nodes = make([]Node, 0, len(layout.Nodes))
 	for _, n := range layout.Nodes {
@@ -144,6 +159,12 @@ func Layout(in Input) (out Output, err error) {
 			Y:      n.Size.Y,
 		}
 		out.Nodes = append(out.Nodes, nn)
+		if nn.X < minX {
+			minX = nn.X
+		}
+		if nn.Y < minY {
+			minY = nn.Y
+		}
 		if rx := nn.X + nn.Width; rx > maxX {
 			maxX = rx
 		}
@@ -160,6 +181,12 @@ func Layout(in Input) (out Output, err error) {
 		ee := Edge{FromID: e.FromID, ToID: e.ToID, Points: append([][2]float64{}, e.Points...)}
 		out.Edges = append(out.Edges, ee)
 		for _, p := range ee.Points {
+			if p[0] < minX {
+				minX = p[0]
+			}
+			if p[1] < minY {
+				minY = p[1]
+			}
 			if p[0] > maxX {
 				maxX = p[0]
 			}
@@ -167,6 +194,27 @@ func Layout(in Input) (out Output, err error) {
 				maxY = p[1]
 			}
 		}
+	}
+
+	if minX > 0 {
+		minX = 0
+	}
+	if minY > 0 {
+		minY = 0
+	}
+	if minX < 0 || minY < 0 {
+		for i := range out.Nodes {
+			out.Nodes[i].X -= minX
+			out.Nodes[i].Y -= minY
+		}
+		for i := range out.Edges {
+			for j := range out.Edges[i].Points {
+				out.Edges[i].Points[j][0] -= minX
+				out.Edges[i].Points[j][1] -= minY
+			}
+		}
+		maxX -= minX
+		maxY -= minY
 	}
 
 	// Apply direction transform. autog's default = TB; transform the
