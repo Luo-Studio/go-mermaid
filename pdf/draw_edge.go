@@ -29,20 +29,24 @@ func drawEdge(pdf *fpdf.Fpdf, e displaylist.Edge, tx func(displaylist.Point) (fl
 		defer pdf.SetLineWidth(rs.StrokeWidth)
 	}
 
-	// 4-point edges come from autog's orthogonal routing
-	// (start, bend1, bend2, end). Treat the bend points as cubic
-	// Bézier control points instead of drawing them as straight
-	// Manhattan segments. The result exits source perpendicular to
-	// its edge, curves smoothly through the inter-rank midline, and
-	// enters target perpendicular to its edge — the classic
-	// flowchart curve (Mermaid.js, Graphviz dot's curved mode). Any
-	// slight centre offset between source and target gets absorbed
-	// into the curve rather than showing as a visible slant.
-	if len(e.Points) == 4 {
+	// Render any polyline of ≥ 4 points as a single cubic Bézier
+	// using points[1] and points[N-2] as control points. autog's
+	// orthogonal routing returns 4 points for adjacent ranks
+	// (start, bend1, bend2, end) and many more points for multi-
+	// rank stair-step routes — but in both cases the second and
+	// second-to-last points sit at the inter-rank midline, so using
+	// them as Bézier control points produces a curve that exits the
+	// source perpendicular to its edge and enters the target
+	// perpendicular to its edge regardless of how many intermediate
+	// stair-steps autog inserted. The intermediate routing detail
+	// gets replaced by a single smooth sweep — fine for this
+	// codebase's graphs since autog adds intermediate bends only
+	// for the ortho stair-step pattern, not to dodge obstacles.
+	if len(e.Points) >= 4 {
 		x0, y0 := tx(e.Points[0])
 		cx0, cy0 := tx(e.Points[1])
-		cx1, cy1 := tx(e.Points[2])
-		x1, y1 := tx(e.Points[3])
+		cx1, cy1 := tx(e.Points[len(e.Points)-2])
+		x1, y1 := tx(e.Points[len(e.Points)-1])
 		pdf.CurveBezierCubic(x0, y0, cx0, cy0, cx1, cy1, x1, y1, "D")
 	} else {
 		x0, y0 := tx(e.Points[0])

@@ -231,6 +231,40 @@ func Layout(in Input) (out Output, err error) {
 	// coordinates of nodes and edge points in-place.
 	transformDirection(in.Direction, &out, maxX, maxY)
 
+	// Expand 2-point edges into 4-point Bézier-friendly form. autog's
+	// orthogonal routing returns adjacent-rank edges as 4-point paths
+	// (start, bend1, bend2, end) but multi-rank edges and edges
+	// between perfectly-aligned nodes come back as just two anchor
+	// points. Inserting control points at the inter-rank midpoint
+	// lets drawEdge render every edge as the same cubic Bézier curve
+	// — so a straight multi-rank edge doesn't visually clash with
+	// curved adjacent-rank edges drawn next to it.
+	horizontal := in.Direction == DirectionLR || in.Direction == DirectionRL
+	for i := range out.Edges {
+		pts := out.Edges[i].Points
+		if len(pts) != 2 {
+			continue
+		}
+		src, tgt := pts[0], pts[1]
+		if horizontal {
+			midX := (src[0] + tgt[0]) / 2
+			out.Edges[i].Points = [][2]float64{
+				src,
+				{midX, src[1]},
+				{midX, tgt[1]},
+				tgt,
+			}
+		} else {
+			midY := (src[1] + tgt[1]) / 2
+			out.Edges[i].Points = [][2]float64{
+				src,
+				{src[0], midY},
+				{tgt[0], midY},
+				tgt,
+			}
+		}
+	}
+
 	out.Width = out.Width + in.Padding*2
 	out.Height = out.Height + in.Padding*2
 	if in.Padding != 0 {
