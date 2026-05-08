@@ -6,7 +6,7 @@ import (
 	"github.com/luo-studio/go-mermaid/displaylist"
 )
 
-func drawText(pdf *fpdf.Fpdf, t displaylist.Text, tx func(displaylist.Point) (float64, float64), rs RoleStyle, emojiFont string) {
+func drawText(pdf *fpdf.Fpdf, t displaylist.Text, tx func(displaylist.Point) (float64, float64), rs RoleStyle, emojiFont string, scale float64) {
 	if len(t.Lines) == 0 {
 		return
 	}
@@ -16,6 +16,13 @@ func drawText(pdf *fpdf.Fpdf, t displaylist.Text, tx func(displaylist.Point) (fl
 	if rs.FontSize <= 0 {
 		rs.FontSize = 10
 	}
+	if scale <= 0 {
+		scale = 1
+	}
+	// Scale FontSize so labels shrink in lockstep with the diagram's
+	// geometry — without this, page-fit shrinking leaves text at full
+	// size while boxes shrink, and text overflows its box.
+	rs.FontSize *= scale
 	pdf.SetFont(rs.Font, rs.FontStyle, rs.FontSize)
 	pdf.SetTextColor(int(rs.TextR), int(rs.TextG), int(rs.TextB))
 

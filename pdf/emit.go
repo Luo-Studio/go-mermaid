@@ -169,7 +169,7 @@ func DrawInto(pdf *fpdf.Fpdf, dl *displaylist.DisplayList, x, y float64, opts Em
 	// Pass 1: clusters (so they sit behind nodes).
 	for _, it := range dl.Items {
 		if c, ok := it.(displaylist.Cluster); ok {
-			drawCluster(pdf, c, tr, style.lookup(c.Role), style.lookup(displaylist.RoleClusterTitle))
+			drawCluster(pdf, c, tr, style.lookup(c.Role), style.lookup(displaylist.RoleClusterTitle), scale)
 		}
 	}
 
@@ -192,7 +192,7 @@ func DrawInto(pdf *fpdf.Fpdf, dl *displaylist.DisplayList, x, y float64, opts Em
 	for _, it := range dl.Items {
 		switch v := it.(type) {
 		case displaylist.Text:
-			drawText(pdf, v, tx, style.lookup(v.Role), emojiFont)
+			drawText(pdf, v, tx, style.lookup(v.Role), emojiFont, scale)
 		case displaylist.Cluster, displaylist.Shape, displaylist.Edge, displaylist.Marker:
 			// already handled
 		default:
