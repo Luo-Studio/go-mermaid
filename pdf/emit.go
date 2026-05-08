@@ -26,8 +26,15 @@ type EmbedOptions struct {
 
 	// MaxWidth caps the rendered width in fpdf's current unit. If the
 	// laid-out DisplayList is wider, it is uniformly scaled down.
-	// 0 = no cap.
+	// 0 = no cap. Ignored if Width or Height is set.
 	MaxWidth float64
+
+	// Width and Height, when set, request a target render box. The
+	// diagram is uniformly scaled (aspect preserved) to fit within
+	// the box: scale = min(Width/dl.Width, Height/dl.Height) when
+	// both are set, otherwise the single set field drives the scale.
+	// 0 on both = use natural size (subject to MaxWidth).
+	Width, Height float64
 
 	// Padding around the diagram (in fpdf's current unit).
 	Padding float64
@@ -52,6 +59,38 @@ func DrawMermaid(pdf *fpdf.Fpdf, src string, x, y float64, opts EmbedOptions) er
 	return DrawInto(pdf, dl, x, y, opts)
 }
 
+// SizeForOptions returns the rendered diagram size in fpdf units
+// after applying opts.Width / opts.Height / opts.MaxWidth scaling.
+// Useful for callers that need to position content immediately
+// below the diagram before calling DrawInto.
+func SizeForOptions(dl *displaylist.DisplayList, opts EmbedOptions) (w, h float64) {
+	if dl == nil || dl.Width <= 0 || dl.Height <= 0 {
+		return 0, 0
+	}
+	scale := scaleForOptions(dl, opts)
+	return dl.Width * scale, dl.Height * scale
+}
+
+func scaleForOptions(dl *displaylist.DisplayList, opts EmbedOptions) float64 {
+	switch {
+	case opts.Width > 0 && opts.Height > 0:
+		sx := opts.Width / dl.Width
+		sy := opts.Height / dl.Height
+		if sy < sx {
+			return sy
+		}
+		return sx
+	case opts.Width > 0:
+		return opts.Width / dl.Width
+	case opts.Height > 0:
+		return opts.Height / dl.Height
+	}
+	if opts.MaxWidth > 0 && dl.Width > opts.MaxWidth {
+		return opts.MaxWidth / dl.Width
+	}
+	return 1.0
+}
+
 // DrawInto draws an already-laid-out DisplayList into pdf at (x, y).
 func DrawInto(pdf *fpdf.Fpdf, dl *displaylist.DisplayList, x, y float64, opts EmbedOptions) error {
 	if dl == nil || len(dl.Items) == 0 {
@@ -70,19 +109,18 @@ func DrawInto(pdf *fpdf.Fpdf, dl *displaylist.DisplayList, x, y float64, opts Em
 			style = DefaultStyle()
 		}
 	}
+	// One DisplayList unit = one fpdf unit by default. Width/Height
+	// (if set) take precedence — the diagram is scaled to fit within
+	// that box, aspect preserved. Otherwise MaxWidth applies as a
+	// scale-down cap. See scaleForOptions for the full rule.
+	scale := scaleForOptions(dl, opts)
+
 	if opts.FillBackground && opts.Theme != "" {
 		br, bg, bb := PageBackground(opts.Theme)
 		pdf.SetFillColor(br, bg, bb)
-		// Bg covers diagram bbox plus padding.
+		// Bg covers diagram bbox (scaled) plus padding.
 		pad := opts.Padding
-		pdf.Rect(x, y, dl.Width+pad*2, dl.Height+pad*2, "F")
-	}
-
-	// One DisplayList unit = one fpdf unit. Callers wanting a
-	// different mapping should scale via opts.MaxWidth.
-	scale := 1.0
-	if opts.MaxWidth > 0 && dl.Width*scale > opts.MaxWidth {
-		scale = opts.MaxWidth / dl.Width
+		pdf.Rect(x, y, dl.Width*scale+pad*2, dl.Height*scale+pad*2, "F")
 	}
 
 	dx := x + opts.Padding
