@@ -219,7 +219,7 @@ func edgeLabelPos(pts []displaylist.Point, forceSide int) (displaylist.Point, di
 	if forceSide == 0 || len(pts) < 2 {
 		return mid, displaylist.VAlignMiddle
 	}
-	const labelOffset = 4.5 // mm perpendicular to the line — large enough to clear ~4 mm tall text on the opposite side
+	const labelOffset = 1.0 // mm perpendicular to the line
 	i := len(pts) / 2
 	a, b := pts[i-1], pts[i]
 	dx, dy := b.X-a.X, b.Y-a.Y
