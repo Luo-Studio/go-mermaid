@@ -84,9 +84,21 @@ func drawShape(ctx *canvas.Context, s displaylist.Shape, rs RoleStyle) {
 		ctx.DrawPath(x, y, p)
 	case displaylist.ShapeKindCylinder:
 		ry := h * 0.12
+		cx := x + w/2
+		// Body rect.
 		ctx.DrawPath(x, y+ry, canvas.Rectangle(w, h-ry*2))
-		ctx.DrawPath(x+w/2, y+ry, canvas.Ellipse(w/2, ry))
-		ctx.DrawPath(x+w/2, y+h-ry, canvas.Ellipse(w/2, ry))
+		// Top: full ellipse (rim).
+		ctx.DrawPath(cx, y+ry, canvas.Ellipse(w/2, ry))
+		// Bottom: front-arc only. The back of the bottom is hidden by
+		// the body. We use a quadratic Bezier from (-rx, 0) through
+		// (0, ry) to (rx, 0) — coordinate-system-agnostic. Control
+		// point at (0, 2*ry) places the curve midpoint exactly at
+		// (0, ry).
+		arc := &canvas.Path{}
+		arc.MoveTo(-w/2, 0)
+		arc.QuadTo(0, 2*ry, w/2, 0)
+		ctx.SetFillColor(color.Transparent)
+		ctx.DrawPath(cx, y+h-ry, arc)
 	case displaylist.ShapeKindStateBullet:
 		cx, cy := x+w/2, y+h/2
 		r := w / 3
