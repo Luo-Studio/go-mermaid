@@ -194,7 +194,18 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 
 	emitNote := func(n *Note) {
 		text := n.Text
-		tw, th := measurer.Measure(text, displaylist.RoleNoteText)
+		// Multi-line note text (from <br/> in source) needs the box
+		// height summed across rows. Measure each line; take max
+		// width and sum heights so the backdrop wraps every row.
+		lines := textutil.SplitLabelLines(text)
+		var tw, th float64
+		for _, line := range lines {
+			lw, lh := measurer.Measure(line, displaylist.RoleNoteText)
+			if lw > tw {
+				tw = lw
+			}
+			th += lh
+		}
 		w := tw + notePadX*2
 		h := th + notePadY*2
 		var x float64
