@@ -20,7 +20,11 @@ type Measurer interface {
 type Options struct {
 	Measurer Measurer
 
-	// FontSize used by the default Measurer when Measurer is nil.
+	// FontSize used by the default Measurer when Measurer is nil. The
+	// value is in DisplayList units — when those map to mm (the
+	// typical fpdf default), 4 corresponds to ≈10pt body text. Pass
+	// a larger value if your DL units are pt and you want bigger
+	// text. Default: 4.
 	FontSize float64
 
 	// Padding around the diagram bbox.
@@ -45,7 +49,7 @@ func (o Options) ResolveMeasurer() Measurer {
 	}
 	fs := o.FontSize
 	if fs <= 0 {
-		fs = 14
+		fs = 4
 	}
 	return fontmetrics.NewDefault(fs)
 }
