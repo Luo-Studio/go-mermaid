@@ -29,11 +29,28 @@ func drawEdge(pdf *fpdf.Fpdf, e displaylist.Edge, tx func(displaylist.Point) (fl
 		defer pdf.SetLineWidth(rs.StrokeWidth)
 	}
 
-	x0, y0 := tx(e.Points[0])
-	for _, p := range e.Points[1:] {
-		x1, y1 := tx(p)
-		pdf.Line(x0, y0, x1, y1)
-		x0, y0 = x1, y1
+	// 4-point edges come from autog's orthogonal routing
+	// (start, bend1, bend2, end). Treat the bend points as cubic
+	// Bézier control points instead of drawing them as straight
+	// Manhattan segments. The result exits source perpendicular to
+	// its edge, curves smoothly through the inter-rank midline, and
+	// enters target perpendicular to its edge — the classic
+	// flowchart curve (Mermaid.js, Graphviz dot's curved mode). Any
+	// slight centre offset between source and target gets absorbed
+	// into the curve rather than showing as a visible slant.
+	if len(e.Points) == 4 {
+		x0, y0 := tx(e.Points[0])
+		cx0, cy0 := tx(e.Points[1])
+		cx1, cy1 := tx(e.Points[2])
+		x1, y1 := tx(e.Points[3])
+		pdf.CurveBezierCubic(x0, y0, cx0, cy0, cx1, cy1, x1, y1, "D")
+	} else {
+		x0, y0 := tx(e.Points[0])
+		for _, p := range e.Points[1:] {
+			x1, y1 := tx(p)
+			pdf.Line(x0, y0, x1, y1)
+			x0, y0 = x1, y1
+		}
 	}
 
 	if e.ArrowEnd != displaylist.MarkerNone {

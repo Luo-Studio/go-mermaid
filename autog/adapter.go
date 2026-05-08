@@ -128,13 +128,14 @@ func Layout(in Input) (out Output, err error) {
 		upstream.WithNodeSize(sizes),
 		upstream.WithNodeSpacing(nodeSpacing),
 		upstream.WithLayerSpacing(layerSpacing),
-		// SinkColoring is a Brandes-Köpf variant that aligns nodes
-		// bottom-up with long vertical edge paths — it's the only
-		// upstream option that takes node widths into account when
-		// placing nodes within a layer, so chain centres line up and
-		// edges stay straight even when widths differ. Trade-off: it
-		// can left-bias parents for very-high fan-out trees.
-		upstream.WithPositioning(upstream.PositioningSinkColoring),
+		// BrandesKoepf averages four alignment passes (left-up,
+		// left-down, right-up, right-down). It centres parents over
+		// their children's bounding box more reliably than
+		// NetworkSimplex (which can still bias toward the leftmost
+		// child) and avoids SinkColoring's strong left-bias for
+		// fan-outs. Any chain alignment offsets are masked by
+		// orthogonal edge routing below.
+		upstream.WithPositioning(upstream.PositioningBrandesKoepf),
 		// Orthogonal edge routing: edges bend at 90° rather than
 		// running straight diagonals between non-aligned centres.
 		// Even when node-X positions don't perfectly match across
