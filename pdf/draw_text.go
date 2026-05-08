@@ -21,8 +21,10 @@ func drawText(pdf *fpdf.Fpdf, t displaylist.Text, tx func(displaylist.Point) (fl
 
 	x, y := tx(t.Pos)
 	// fpdf's text origin is the baseline. 1pt ≈ 0.353 mm, so a
-	// FontSize-pt line takes ~0.4 * FontSize mm.
-	lineH := rs.FontSize * 0.4
+	// FontSize-pt line takes ~0.353 mm at 1pt = 0.353 mm. We use 0.36
+	// for tight per-line spacing in multi-line labels — the previous
+	// 0.4 gave noticeable extra gap between lines.
+	lineH := rs.FontSize * 0.36
 	totalH := lineH * float64(len(t.Lines))
 
 	var startY float64
