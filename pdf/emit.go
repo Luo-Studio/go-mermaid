@@ -110,6 +110,21 @@ func DrawInto(pdf *fpdf.Fpdf, dl *displaylist.DisplayList, x, y float64, opts Em
 	if dl == nil || len(dl.Items) == 0 {
 		return nil
 	}
+	// Save the caller's fpdf state so DrawInto's internal SetFillColor
+	// / SetDrawColor / SetTextColor / SetFont / SetLineWidth /
+	// SetDashPattern calls don't leak out and surprise the caller's
+	// next draw operation.
+	savedFillR, savedFillG, savedFillB := pdf.GetFillColor()
+	savedDrawR, savedDrawG, savedDrawB := pdf.GetDrawColor()
+	savedTextR, savedTextG, savedTextB := pdf.GetTextColor()
+	savedLineWidth := pdf.GetLineWidth()
+	defer func() {
+		pdf.SetFillColor(savedFillR, savedFillG, savedFillB)
+		pdf.SetDrawColor(savedDrawR, savedDrawG, savedDrawB)
+		pdf.SetTextColor(savedTextR, savedTextG, savedTextB)
+		pdf.SetLineWidth(savedLineWidth)
+		pdf.SetDashPattern(nil, 0)
+	}()
 	// Resolve which fpdf font families to use for body text and emoji.
 	// If the caller has already registered fonts (e.g. the platform's
 	// PDF lib registers Inter and NotoColorEmoji once at boot), use
@@ -173,20 +188,26 @@ func DrawInto(pdf *fpdf.Fpdf, dl *displaylist.DisplayList, x, y float64, opts Em
 		}
 	}
 
-	// Pass 2: shapes, edges, text, markers (shapes before edges so
-	// edge-label text overlays cleanly).
-	for _, it := range dl.Items {
-		switch v := it.(type) {
-		case displaylist.Shape:
-			drawShape(pdf, v, tr, style.lookup(v.Role))
-		}
-	}
+	// Pass 2: edges and markers first, shapes painted on top. Any
+	// edge that autog routes through a node's bounding box gets
+	// visually masked by the node's fill — a pragmatic fix for
+	// the routing imperfections (autog's spline path-finding can
+	// pick the geometrically shortest path even when it crosses
+	// an unrelated node's footprint). Shapes still render their
+	// strokes on the visible edges; the masked portion just
+	// disappears under the fill.
 	for _, it := range dl.Items {
 		switch v := it.(type) {
 		case displaylist.Edge:
 			drawEdge(pdf, v, tx, style.lookup(v.Role), scale)
 		case displaylist.Marker:
 			drawMarker(pdf, v, tx, style.lookup(v.Role), scale)
+		}
+	}
+	for _, it := range dl.Items {
+		switch v := it.(type) {
+		case displaylist.Shape:
+			drawShape(pdf, v, tr, style.lookup(v.Role))
 		}
 	}
 	for _, it := range dl.Items {

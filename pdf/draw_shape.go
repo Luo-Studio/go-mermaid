@@ -195,18 +195,22 @@ func applyStroke(pdf *fpdf.Fpdf, rs RoleStyle) {
 }
 
 func applyFill(pdf *fpdf.Fpdf, rs RoleStyle) string {
-	hasFill := rs.FillR >= 0
 	hasStroke := rs.StrokeR >= 0
-	if hasFill {
+	// Default unfilled shapes to a white fill so they mask any edge
+	// the routing accidentally draws through them. Without an
+	// opaque fill, a transparent node would let the underlying edge
+	// show through — defeating the "draw shapes on top of edges"
+	// pass-order fix.
+	if rs.FillR >= 0 {
 		pdf.SetFillColor(int(rs.FillR), int(rs.FillG), int(rs.FillB))
+	} else {
+		pdf.SetFillColor(255, 255, 255)
 	}
 	switch {
-	case hasFill && hasStroke:
+	case hasStroke:
 		return "FD"
-	case hasFill:
-		return "F"
 	default:
-		return "D"
+		return "F"
 	}
 }
 
