@@ -46,9 +46,9 @@ type ClusterRect struct {
 }
 
 const (
-	clusterPad     = 12.0
-	clusterTitleBar = 18.0
-	clusterPrefix  = "__cluster__"
+	clusterPad      = 5.0
+	clusterTitleBar = 7.0
+	clusterPrefix   = "__cluster__"
 )
 
 // isClusterID reports whether id was assigned as a cluster super-node.
