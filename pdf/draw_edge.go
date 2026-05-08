@@ -29,26 +29,30 @@ func drawEdge(pdf *fpdf.Fpdf, e displaylist.Edge, tx func(displaylist.Point) (fl
 		defer pdf.SetLineWidth(rs.StrokeWidth)
 	}
 
-	// Render any polyline of ≥ 4 points as a single cubic Bézier
-	// using points[1] and points[N-2] as control points. autog's
-	// orthogonal routing returns 4 points for adjacent ranks
-	// (start, bend1, bend2, end) and many more points for multi-
-	// rank stair-step routes — but in both cases the second and
-	// second-to-last points sit at the inter-rank midline, so using
-	// them as Bézier control points produces a curve that exits the
-	// source perpendicular to its edge and enters the target
-	// perpendicular to its edge regardless of how many intermediate
-	// stair-steps autog inserted. The intermediate routing detail
-	// gets replaced by a single smooth sweep — fine for this
-	// codebase's graphs since autog adds intermediate bends only
-	// for the ortho stair-step pattern, not to dodge obstacles.
-	if len(e.Points) >= 4 {
+	// autog's spline routing returns each edge as a piece-wise
+	// cubic Bézier formatted as 4*K points: each consecutive group
+	// of four points (start, ctrl1, ctrl2, end) is one cubic Bézier
+	// segment, and consecutive segments come back with a duplicated
+	// shared endpoint (the end of segment i ≈ the start of segment
+	// i+1). Render each 4-tuple as one CurveBezierCubicTo so the
+	// edge follows the obstacle-aware path autog computed.
+	if len(e.Points) >= 4 && len(e.Points)%4 == 0 {
 		x0, y0 := tx(e.Points[0])
-		cx0, cy0 := tx(e.Points[1])
-		cx1, cy1 := tx(e.Points[len(e.Points)-2])
-		x1, y1 := tx(e.Points[len(e.Points)-1])
-		pdf.CurveBezierCubic(x0, y0, cx0, cy0, cx1, cy1, x1, y1, "D")
+		pdf.MoveTo(x0, y0)
+		for i := 0; i < len(e.Points); i += 4 {
+			c1x, c1y := tx(e.Points[i+1])
+			c2x, c2y := tx(e.Points[i+2])
+			ex, ey := tx(e.Points[i+3])
+			pdf.CurveBezierCubicTo(c1x, c1y, c2x, c2y, ex, ey)
+			// Skip the duplicated shared endpoint at the start of the
+			// next segment by advancing past the (start, ...) pair —
+			// loop step += 4 already handles that since each segment
+			// is exactly 4 points.
+		}
+		pdf.DrawPath("D")
 	} else {
+		// Fallback for edges that didn't come through the spline
+		// pipeline (malformed polylines, the rare 2-point case).
 		x0, y0 := tx(e.Points[0])
 		for _, p := range e.Points[1:] {
 			x1, y1 := tx(p)
@@ -58,11 +62,30 @@ func drawEdge(pdf *fpdf.Fpdf, e displaylist.Edge, tx func(displaylist.Point) (fl
 	}
 
 	if e.ArrowEnd != displaylist.MarkerNone {
-		drawArrow(pdf, e.Points[len(e.Points)-1], e.Points[len(e.Points)-2], e.ArrowEnd, tx, rs, scale)
+		tip := e.Points[len(e.Points)-1]
+		behind := lastDistinct(e.Points, len(e.Points)-2, -1, tip)
+		drawArrow(pdf, tip, behind, e.ArrowEnd, tx, rs, scale)
 	}
 	if e.ArrowStart != displaylist.MarkerNone {
-		drawArrow(pdf, e.Points[0], e.Points[1], e.ArrowStart, tx, rs, scale)
+		tip := e.Points[0]
+		behind := lastDistinct(e.Points, 1, 1, tip)
+		drawArrow(pdf, tip, behind, e.ArrowStart, tx, rs, scale)
 	}
+}
+
+// lastDistinct walks the polyline starting at `start` (stepping by
+// `step`, +1 or -1) and returns the first point whose position
+// differs from `tip`. Used to pick a "behind" point for arrow
+// direction when the endpoint coincides with adjacent control
+// points (which happens with autog's spline output where the
+// final cubic segment's ctrl2 sits exactly at the endpoint).
+func lastDistinct(pts []displaylist.Point, start, step int, tip displaylist.Point) displaylist.Point {
+	for i := start; i >= 0 && i < len(pts); i += step {
+		if pts[i] != tip {
+			return pts[i]
+		}
+	}
+	return pts[start]
 }
 
 // drawArrow renders an arrow marker at `tip` pointing away from `behind`.

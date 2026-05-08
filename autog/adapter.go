@@ -1,4 +1,4 @@
-// Package autog wraps github.com/nulab/autog with a smaller surface
+// Package autog wraps github.com/Luo-Studio/autog with a smaller surface
 // suited to go-mermaid's layout stage. It is a thin adapter — no
 // cluster recursion (added in Phase 3), no per-diagram-type
 // knowledge.
@@ -9,8 +9,8 @@ import (
 	"math"
 	"runtime"
 
-	upstream "github.com/nulab/autog"
-	upgraph "github.com/nulab/autog/graph"
+	upstream "github.com/Luo-Studio/autog"
+	upgraph "github.com/Luo-Studio/autog/graph"
 )
 
 // Direction matches Mermaid's flowchart direction.
@@ -136,13 +136,11 @@ func Layout(in Input) (out Output, err error) {
 		// fan-outs. Any chain alignment offsets are masked by
 		// orthogonal edge routing below.
 		upstream.WithPositioning(upstream.PositioningBrandesKoepf),
-		// Orthogonal edge routing: edges bend at 90° rather than
-		// running straight diagonals between non-aligned centres.
-		// Even when node-X positions don't perfectly match across
-		// ranks, the right-angle paths look intentional and clean,
-		// and high-fan-out trees get the classic dendrogram look
-		// (one trunk down to the inter-rank midline, then branches).
-		upstream.WithEdgeRouting(upstream.EdgeRoutingOrtho),
+		// Spline edge routing: piece-wise cubic Bézier curves that
+		// route around obstacle nodes natively. Each edge comes back
+		// as 1+3N points (start, then groups of two control points
+		// + an endpoint per Bézier segment).
+		upstream.WithEdgeRouting(upstream.EdgeRoutingSplines),
 	)
 
 	// Determine post-layout coordinate flip for direction. autog's
@@ -231,39 +229,6 @@ func Layout(in Input) (out Output, err error) {
 	// coordinates of nodes and edge points in-place.
 	transformDirection(in.Direction, &out, maxX, maxY)
 
-	// Expand 2-point edges into 4-point Bézier-friendly form. autog's
-	// orthogonal routing returns adjacent-rank edges as 4-point paths
-	// (start, bend1, bend2, end) but multi-rank edges and edges
-	// between perfectly-aligned nodes come back as just two anchor
-	// points. Inserting control points at the inter-rank midpoint
-	// lets drawEdge render every edge as the same cubic Bézier curve
-	// — so a straight multi-rank edge doesn't visually clash with
-	// curved adjacent-rank edges drawn next to it.
-	horizontal := in.Direction == DirectionLR || in.Direction == DirectionRL
-	for i := range out.Edges {
-		pts := out.Edges[i].Points
-		if len(pts) != 2 {
-			continue
-		}
-		src, tgt := pts[0], pts[1]
-		if horizontal {
-			midX := (src[0] + tgt[0]) / 2
-			out.Edges[i].Points = [][2]float64{
-				src,
-				{midX, src[1]},
-				{midX, tgt[1]},
-				tgt,
-			}
-		} else {
-			midY := (src[1] + tgt[1]) / 2
-			out.Edges[i].Points = [][2]float64{
-				src,
-				{src[0], midY},
-				{tgt[0], midY},
-				tgt,
-			}
-		}
-	}
 
 	out.Width = out.Width + in.Padding*2
 	out.Height = out.Height + in.Padding*2
