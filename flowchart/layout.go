@@ -9,8 +9,8 @@ import (
 // Layout positions the diagram and emits a DisplayList. The Measurer
 // in opts (resolved via opts.ResolveMeasurer) sizes each node's label.
 //
-// Phase 2: subgraphs are parsed but flattened in layout — every
-// node is laid out at top level. Cluster recursion lands in Phase 3.
+// Diagrams without subgraphs use a flat autog layout; diagrams with
+// subgraphs use the recursive cluster engine.
 func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 	if d == nil {
 		return &displaylist.DisplayList{}
@@ -28,6 +28,13 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 		autogEdges = append(autogEdges, autog.Edge{FromID: e.From, ToID: e.To})
 	}
 
+	if len(d.Subgraphs) == 0 {
+		return layoutFlat(d, autogNodes, autogEdges, opts)
+	}
+	return layoutWithClusters(d, autogNodes, autogEdges, opts)
+}
+
+func layoutFlat(d *Diagram, autogNodes []autog.Node, autogEdges []autog.Edge, opts layoutopts.Options) *displaylist.DisplayList {
 	out, err := autog.Layout(autog.Input{
 		Nodes:        autogNodes,
 		Edges:        autogEdges,
@@ -39,18 +46,67 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 	if err != nil {
 		return &displaylist.DisplayList{}
 	}
-
 	dl := &displaylist.DisplayList{Width: out.Width, Height: out.Height}
-	posByID := map[string]autog.Node{}
-	for _, n := range out.Nodes {
-		posByID[n.ID] = n
+	emitNodes(dl, out.Nodes, d)
+	emitEdges(dl, out.Edges, d)
+	return dl
+}
+
+func layoutWithClusters(d *Diagram, autogNodes []autog.Node, autogEdges []autog.Edge, opts layoutopts.Options) *displaylist.DisplayList {
+	clusters := convertSubgraphs(d.Subgraphs)
+	out, err := autog.LayoutClusters(autog.ClusterInput{
+		Direction:    autogDir(d.Direction),
+		NodeSpacing:  opts.NodeSpacing,
+		LayerSpacing: opts.LayerSpacing,
+		Padding:      opts.Padding,
+		Nodes:        autogNodes,
+		Edges:        autogEdges,
+		Clusters:     clusters,
+	})
+	if err != nil {
+		return &displaylist.DisplayList{}
 	}
+	dl := &displaylist.DisplayList{Width: out.Width, Height: out.Height}
+	emitClusterRects(dl, out.ClusterRects)
+	emitNodes(dl, out.Nodes, d)
+	emitEdges(dl, out.Edges, d)
+	return dl
+}
+
+func convertSubgraphs(sgs []*Subgraph) []*autog.Cluster {
+	out := make([]*autog.Cluster, len(sgs))
+	for i, sg := range sgs {
+		title := sg.Label
+		if title == "" {
+			title = sg.ID
+		}
+		out[i] = &autog.Cluster{
+			ID:       sg.ID,
+			Title:    title,
+			NodeIDs:  sg.NodeIDs,
+			Children: convertSubgraphs(sg.Children),
+		}
+	}
+	return out
+}
+
+func emitClusterRects(dl *displaylist.DisplayList, rects []autog.ClusterRect) {
+	for _, r := range rects {
+		dl.Items = append(dl.Items, displaylist.Cluster{
+			BBox:  r.BBox,
+			Title: r.Title,
+			Role:  displaylist.RoleSubgraph,
+		})
+		emitClusterRects(dl, r.Children)
+	}
+}
+
+func emitNodes(dl *displaylist.DisplayList, nodes []autog.Node, d *Diagram) {
 	astByID := map[string]Node{}
 	for _, n := range d.Nodes {
 		astByID[n.ID] = n
 	}
-
-	for _, n := range out.Nodes {
+	for _, n := range nodes {
 		ast := astByID[n.ID]
 		bbox := displaylist.Rect{X: n.X, Y: n.Y, W: n.Width, H: n.Height}
 		shape := displaylist.Shape{
@@ -70,13 +126,15 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 			Role:   displaylist.RoleNode,
 		})
 	}
+}
 
-	for _, e := range out.Edges {
+func emitEdges(dl *displaylist.DisplayList, edges []autog.Edge, d *Diagram) {
+	for _, e := range edges {
+		ast := findEdge(d, e.FromID, e.ToID)
 		points := make([]displaylist.Point, 0, len(e.Points))
 		for _, p := range e.Points {
 			points = append(points, displaylist.Point{X: p[0], Y: p[1]})
 		}
-		ast := findEdge(d, e.FromID, e.ToID)
 		dl.Items = append(dl.Items, displaylist.Edge{
 			Points:     points,
 			LineStyle:  edgeLineStyle(ast.Style),
@@ -84,7 +142,7 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 			ArrowEnd:   arrowFor(ast.ArrowEnd),
 			Role:       displaylist.RoleEdge,
 		})
-		if ast.Label != "" {
+		if ast.Label != "" && len(points) > 0 {
 			dl.Items = append(dl.Items, displaylist.Text{
 				Pos:    midpoint(points),
 				Lines:  []string{ast.Label},
@@ -94,7 +152,6 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 			})
 		}
 	}
-	return dl
 }
 
 func autogDir(d Direction) autog.Direction {
