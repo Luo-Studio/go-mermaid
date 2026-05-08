@@ -32,19 +32,22 @@ func shapeKind(s NodeShape) displaylist.ShapeKind {
 
 // nodeSize returns the bbox (W, H) for a node given its label
 // dimensions and shape. Padding varies by shape — rounder shapes need
-// more breathing room than rectangles.
+// more breathing room than rectangles. Values are in DisplayList
+// units (typically mm); a fontSize of ≈4 produces lh ≈ 5.5 mm so
+// these padding values yield boxes that look balanced around 10pt
+// rendered text.
 func nodeSize(shape NodeShape, labelW, labelH float64) (w, h float64) {
-	pad := 16.0
+	padX, padY := 4.0, 3.0
 	switch shape {
 	case ShapeDiamond, ShapeCircle, ShapeDoubleCircle, ShapeHexagon:
-		pad = 24
+		padX, padY = 6.0, 5.0
 	case ShapeStadium, ShapeRound:
-		pad = 18
+		padX, padY = 5.0, 3.0
 	}
-	w = labelW + pad*2
-	h = labelH + pad
-	if h < 28 {
-		h = 28
+	w = labelW + padX*2
+	h = labelH + padY*2
+	if h < 8 {
+		h = 8
 	}
 	if shape == ShapeCircle || shape == ShapeDoubleCircle {
 		side := w

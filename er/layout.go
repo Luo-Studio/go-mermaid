@@ -15,26 +15,39 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 	measurer := opts.ResolveMeasurer()
 	measure := measurer.Measure
 
+	// Sizing is measurer-driven so it scales with the caller's font.
+	// Padding is small in DisplayList units (typically mm) — the
+	// Phase 6 placeholders of 22/16/12 were ~10x too large for an
+	// fpdf doc rendered in mm with ~10pt body text.
 	const (
-		titleH = 22.0
-		rowH   = 16.0
-		padH   = 12.0
+		titlePadV = 4.0  // top/bottom padding inside the title bar
+		rowPadV   = 1.0  // gap between attribute rows
+		boxPadH   = 6.0  // horizontal text padding
+		bottomPad = 4.0  // padding below the last attribute
 	)
+
+	_, titleLineH := measure("X", displaylist.RoleEntityBox)
+	_, attrLineH := measure("X", displaylist.RoleEntityAttribute)
 
 	var nodes []autog.Node
 	entityByID := map[string]*Entity{}
 	for _, e := range d.Entities {
 		entityByID[e.ID] = e
 		nameW, _ := measure(e.ID, displaylist.RoleEntityBox)
-		w := nameW + padH*2
+		w := nameW + boxPadH*2
 		for _, a := range e.Attributes {
 			line := formatAttribute(a)
 			lw, _ := measure(line, displaylist.RoleEntityAttribute)
-			if lw+padH*2 > w {
-				w = lw + padH*2
+			if lw+boxPadH*2 > w {
+				w = lw + boxPadH*2
 			}
 		}
-		h := titleH + rowH*float64(len(e.Attributes)) + 6
+		titleBarH := titleLineH + titlePadV*2
+		bodyH := 0.0
+		if n := len(e.Attributes); n > 0 {
+			bodyH = float64(n)*(attrLineH+rowPadV) + bottomPad
+		}
+		h := titleBarH + bodyH
 		nodes = append(nodes, autog.Node{ID: e.ID, Width: w, Height: h})
 	}
 
@@ -55,8 +68,11 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 	}
 
 	dl := &displaylist.DisplayList{Width: out.Width, Height: out.Height}
+	titleBarH := titleLineH + titlePadV*2
 	for _, n := range out.Nodes {
-		emitEntity(dl, *entityByID[n.ID], displaylist.Rect{X: n.X, Y: n.Y, W: n.Width, H: n.Height})
+		emitEntity(dl, *entityByID[n.ID],
+			displaylist.Rect{X: n.X, Y: n.Y, W: n.Width, H: n.Height},
+			titleBarH, attrLineH+rowPadV)
 	}
 	for _, e := range out.Edges {
 		r := findRelationship(d, e.FromID, e.ToID)
@@ -65,14 +81,14 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 	return dl
 }
 
-func emitEntity(dl *displaylist.DisplayList, e Entity, b displaylist.Rect) {
+func emitEntity(dl *displaylist.DisplayList, e Entity, b displaylist.Rect, titleBarH, rowAdvance float64) {
 	dl.Items = append(dl.Items, displaylist.Shape{
 		Kind: displaylist.ShapeKindRect,
 		BBox: b,
 		Role: displaylist.RoleEntityBox,
 	})
 	dl.Items = append(dl.Items, displaylist.Text{
-		Pos:    displaylist.Point{X: b.X + b.W/2, Y: b.Y + 11},
+		Pos:    displaylist.Point{X: b.X + b.W/2, Y: b.Y + titleBarH/2},
 		Lines:  textutil.SplitLabelLines(e.ID),
 		Align:  displaylist.AlignCenter,
 		VAlign: displaylist.VAlignMiddle,
@@ -80,12 +96,12 @@ func emitEntity(dl *displaylist.DisplayList, e Entity, b displaylist.Rect) {
 	})
 	if len(e.Attributes) > 0 {
 		dl.Items = append(dl.Items, displaylist.Edge{
-			Points:    []displaylist.Point{{X: b.X, Y: b.Y + 22}, {X: b.X + b.W, Y: b.Y + 22}},
+			Points:    []displaylist.Point{{X: b.X, Y: b.Y + titleBarH}, {X: b.X + b.W, Y: b.Y + titleBarH}},
 			LineStyle: displaylist.LineStyleSolid,
 			Role:      displaylist.RoleEntityBox,
 		})
 	}
-	cy := b.Y + 22 + 8
+	cy := b.Y + titleBarH + rowAdvance/2
 	for _, a := range e.Attributes {
 		dl.Items = append(dl.Items, displaylist.Text{
 			Pos:    displaylist.Point{X: b.X + 6, Y: cy},
@@ -94,7 +110,7 @@ func emitEntity(dl *displaylist.DisplayList, e Entity, b displaylist.Rect) {
 			VAlign: displaylist.VAlignMiddle,
 			Role:   displaylist.RoleEntityAttribute,
 		})
-		cy += 16
+		cy += rowAdvance
 	}
 }
 

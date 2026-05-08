@@ -101,9 +101,20 @@ func Layout(in Input) (out Output, err error) {
 	}
 	src := upgraph.EdgeSlice(adj)
 
+	// autog only computes top-to-bottom layouts internally. For LR/RL
+	// we rotate the result, but autog's per-rank and inter-rank
+	// spacing uses node Width/Height as it sees them — and after
+	// rotation, what we want as the horizontal axis was autog's
+	// vertical axis. Pre-swap W and H so autog spaces with the
+	// dimensions that match the *post-rotation* axis usage.
+	swapInputDims := in.Direction == DirectionLR || in.Direction == DirectionRL
 	sizes := make(map[string]upgraph.Size, len(in.Nodes))
 	for _, n := range in.Nodes {
-		sizes[n.ID] = upgraph.Size{W: n.Width, H: n.Height}
+		w, h := n.Width, n.Height
+		if swapInputDims {
+			w, h = h, w
+		}
+		sizes[n.ID] = upgraph.Size{W: w, H: h}
 	}
 
 	layout := upstream.Layout(
@@ -174,6 +185,32 @@ func Layout(in Input) (out Output, err error) {
 	return out, nil
 }
 
+// bboxOf returns the (width, height) bounding all positioned nodes
+// and edge waypoints in out. Use after a coordinate transformation
+// to recompute the diagram extents.
+func bboxOf(out *Output) (float64, float64) {
+	var w, h float64
+	for _, n := range out.Nodes {
+		if rx := n.X + n.Width; rx > w {
+			w = rx
+		}
+		if ry := n.Y + n.Height; ry > h {
+			h = ry
+		}
+	}
+	for _, e := range out.Edges {
+		for _, p := range e.Points {
+			if p[0] > w {
+				w = p[0]
+			}
+			if p[1] > h {
+				h = p[1]
+			}
+		}
+	}
+	return w, h
+}
+
 func transformDirection(dir Direction, out *Output, maxX, maxY float64) {
 	switch dir {
 	case DirectionTB:
@@ -192,47 +229,42 @@ func transformDirection(dir Direction, out *Output, maxX, maxY float64) {
 		out.Width = maxX
 		out.Height = maxY
 	case DirectionLR:
-		// rotate 90° CCW: (x, y) -> (y, x); width and height swap
+		// Input was given to autog with W/H pre-swapped (so autog's
+		// rank-spacing — which it applies to its Y axis — uses what
+		// the caller calls "Width", giving us the column gap we want
+		// after rotation). Swap (X, Y) of positions and edge points
+		// to rotate the layout 90° CCW, then swap node W/H back so
+		// the output dimensions match what the caller passed in.
 		for i := range out.Nodes {
-			oldX, oldY := out.Nodes[i].X, out.Nodes[i].Y
-			oldW, oldH := out.Nodes[i].Width, out.Nodes[i].Height
-			out.Nodes[i].X = oldY
-			out.Nodes[i].Y = oldX
-			out.Nodes[i].Width = oldH
-			out.Nodes[i].Height = oldW
+			out.Nodes[i].X, out.Nodes[i].Y = out.Nodes[i].Y, out.Nodes[i].X
+			out.Nodes[i].Width, out.Nodes[i].Height = out.Nodes[i].Height, out.Nodes[i].Width
 		}
 		for i := range out.Edges {
 			for j := range out.Edges[i].Points {
 				out.Edges[i].Points[j][0], out.Edges[i].Points[j][1] = out.Edges[i].Points[j][1], out.Edges[i].Points[j][0]
 			}
 		}
-		out.Width = maxY
-		out.Height = maxX
+		out.Width, out.Height = bboxOf(out)
 	case DirectionRL:
-		// flip X after LR rotation
+		// Same as LR, then mirror X.
 		for i := range out.Nodes {
-			oldX, oldY := out.Nodes[i].X, out.Nodes[i].Y
-			oldW, oldH := out.Nodes[i].Width, out.Nodes[i].Height
-			out.Nodes[i].X = oldY
-			out.Nodes[i].Y = oldX
-			out.Nodes[i].Width = oldH
-			out.Nodes[i].Height = oldW
+			out.Nodes[i].X, out.Nodes[i].Y = out.Nodes[i].Y, out.Nodes[i].X
+			out.Nodes[i].Width, out.Nodes[i].Height = out.Nodes[i].Height, out.Nodes[i].Width
 		}
 		for i := range out.Edges {
 			for j := range out.Edges[i].Points {
 				out.Edges[i].Points[j][0], out.Edges[i].Points[j][1] = out.Edges[i].Points[j][1], out.Edges[i].Points[j][0]
 			}
 		}
-		// now flip horizontally
+		w, h := bboxOf(out)
 		for i := range out.Nodes {
-			out.Nodes[i].X = maxY - out.Nodes[i].X - out.Nodes[i].Width
+			out.Nodes[i].X = w - out.Nodes[i].X - out.Nodes[i].Width
 		}
 		for i := range out.Edges {
 			for j := range out.Edges[i].Points {
-				out.Edges[i].Points[j][0] = maxY - out.Edges[i].Points[j][0]
+				out.Edges[i].Points[j][0] = w - out.Edges[i].Points[j][0]
 			}
 		}
-		out.Width = maxY
-		out.Height = maxX
+		out.Width, out.Height = w, h
 	}
 }
