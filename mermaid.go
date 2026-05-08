@@ -59,6 +59,26 @@ const (
 	typeState
 )
 
+// DetectDiagramType returns a string identifier for the diagram type
+// implied by src ("flowchart", "sequence", "class", "er", "state",
+// or "" for unknown). Used by external tools (e.g., cmd/parse).
+func DetectDiagramType(src string) string {
+	switch detectType(src) {
+	case typeFlowchart:
+		return "flowchart"
+	case typeSequence:
+		return "sequence"
+	case typeClass:
+		return "class"
+	case typeER:
+		return "er"
+	case typeState:
+		return "state"
+	default:
+		return ""
+	}
+}
+
 // detectType returns the diagram type implied by src's first non-
 // blank, non-comment line.
 func detectType(src string) diagramType {

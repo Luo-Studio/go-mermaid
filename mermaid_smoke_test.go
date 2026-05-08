@@ -23,6 +23,27 @@ func TestPhase2Smoke(t *testing.T) {
 	}
 }
 
+func TestPhase8AllDiagramTypes(t *testing.T) {
+	cases := map[string]string{
+		"flowchart": "flowchart TB\nA --> B\n",
+		"sequence":  "sequenceDiagram\nparticipant A\nparticipant B\nA->>B: hi\n",
+		"class":     "classDiagram\nclass A\nclass B\nA <|-- B\n",
+		"er":        "erDiagram\nA ||--o{ B : has\n",
+		"state":     "stateDiagram-v2\n[*] --> S\nS --> [*]\n",
+	}
+	for kind, src := range cases {
+		t.Run(kind, func(t *testing.T) {
+			dl, err := ParseAndLayout(src, LayoutOptions{})
+			if err != nil {
+				t.Fatalf("ParseAndLayout: %v", err)
+			}
+			if dl == nil || len(dl.Items) == 0 {
+				t.Fatal("empty DisplayList")
+			}
+		})
+	}
+}
+
 func TestPhase7Smoke(t *testing.T) {
 	src := `stateDiagram-v2
 [*] --> Idle
