@@ -106,7 +106,10 @@ func drawShape(pdf *fpdf.Fpdf, s displaylist.Shape, tr func(displaylist.Rect) (f
 }
 
 // drawCluster renders a Cluster backdrop + optional title above.
-func drawCluster(pdf *fpdf.Fpdf, c displaylist.Cluster, tr func(displaylist.Rect) (float64, float64, float64, float64), bodyStyle, titleStyle RoleStyle) {
+func drawCluster(pdf *fpdf.Fpdf, c displaylist.Cluster, tr func(displaylist.Rect) (float64, float64, float64, float64), bodyStyle, titleStyle RoleStyle, scale float64) {
+	if scale <= 0 {
+		scale = 1
+	}
 	x, y, w, h := tr(c.BBox)
 	applyStroke(pdf, bodyStyle)
 	fillStyle := applyFill(pdf, bodyStyle)
@@ -124,6 +127,7 @@ func drawCluster(pdf *fpdf.Fpdf, c displaylist.Cluster, tr func(displaylist.Rect
 		if fs <= 0 {
 			fs = 10
 		}
+		fs *= scale
 		pdf.SetFont(font, fontStyle, fs)
 		pdf.SetTextColor(int(titleStyle.TextR), int(titleStyle.TextG), int(titleStyle.TextB))
 		titleW := pdf.GetStringWidth(c.Title)
