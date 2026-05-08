@@ -174,6 +174,32 @@ func Layout(in Input) (out Output, err error) {
 	return out, nil
 }
 
+// bboxOf returns the (width, height) bounding all positioned nodes
+// and edge waypoints in out. Use after a coordinate transformation
+// to recompute the diagram extents.
+func bboxOf(out *Output) (float64, float64) {
+	var w, h float64
+	for _, n := range out.Nodes {
+		if rx := n.X + n.Width; rx > w {
+			w = rx
+		}
+		if ry := n.Y + n.Height; ry > h {
+			h = ry
+		}
+	}
+	for _, e := range out.Edges {
+		for _, p := range e.Points {
+			if p[0] > w {
+				w = p[0]
+			}
+			if p[1] > h {
+				h = p[1]
+			}
+		}
+	}
+	return w, h
+}
+
 func transformDirection(dir Direction, out *Output, maxX, maxY float64) {
 	switch dir {
 	case DirectionTB:
@@ -192,47 +218,39 @@ func transformDirection(dir Direction, out *Output, maxX, maxY float64) {
 		out.Width = maxX
 		out.Height = maxY
 	case DirectionLR:
-		// rotate 90° CCW: (x, y) -> (y, x); width and height swap
+		// Rotate the LAYOUT 90° (swap X and Y of positions) so what was
+		// "down the page" becomes "right across the page". Node W and H
+		// must NOT swap — text doesn't rotate, so a box that was sized
+		// to fit "createTodo" horizontally stays that wide.
 		for i := range out.Nodes {
-			oldX, oldY := out.Nodes[i].X, out.Nodes[i].Y
-			oldW, oldH := out.Nodes[i].Width, out.Nodes[i].Height
-			out.Nodes[i].X = oldY
-			out.Nodes[i].Y = oldX
-			out.Nodes[i].Width = oldH
-			out.Nodes[i].Height = oldW
+			out.Nodes[i].X, out.Nodes[i].Y = out.Nodes[i].Y, out.Nodes[i].X
 		}
 		for i := range out.Edges {
 			for j := range out.Edges[i].Points {
 				out.Edges[i].Points[j][0], out.Edges[i].Points[j][1] = out.Edges[i].Points[j][1], out.Edges[i].Points[j][0]
 			}
 		}
-		out.Width = maxY
-		out.Height = maxX
+		out.Width, out.Height = bboxOf(out)
 	case DirectionRL:
-		// flip X after LR rotation
+		// Same axis swap as LR, then mirror X. Width and Height stay.
 		for i := range out.Nodes {
-			oldX, oldY := out.Nodes[i].X, out.Nodes[i].Y
-			oldW, oldH := out.Nodes[i].Width, out.Nodes[i].Height
-			out.Nodes[i].X = oldY
-			out.Nodes[i].Y = oldX
-			out.Nodes[i].Width = oldH
-			out.Nodes[i].Height = oldW
+			out.Nodes[i].X, out.Nodes[i].Y = out.Nodes[i].Y, out.Nodes[i].X
 		}
 		for i := range out.Edges {
 			for j := range out.Edges[i].Points {
 				out.Edges[i].Points[j][0], out.Edges[i].Points[j][1] = out.Edges[i].Points[j][1], out.Edges[i].Points[j][0]
 			}
 		}
-		// now flip horizontally
+		w, h := bboxOf(out)
+		// flip horizontally
 		for i := range out.Nodes {
-			out.Nodes[i].X = maxY - out.Nodes[i].X - out.Nodes[i].Width
+			out.Nodes[i].X = w - out.Nodes[i].X - out.Nodes[i].Width
 		}
 		for i := range out.Edges {
 			for j := range out.Edges[i].Points {
-				out.Edges[i].Points[j][0] = maxY - out.Edges[i].Points[j][0]
+				out.Edges[i].Points[j][0] = w - out.Edges[i].Points[j][0]
 			}
 		}
-		out.Width = maxY
-		out.Height = maxX
+		out.Width, out.Height = w, h
 	}
 }
