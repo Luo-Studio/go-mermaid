@@ -72,13 +72,18 @@ func Layout(in Input) (out Output, err error) {
 		}
 	}()
 
+	// Defaults are tuned for ~10pt body text in mm (the typical fpdf
+	// case). Larger callers can override via Input.NodeSpacing /
+	// LayerSpacing. Previous defaults (24/40) were sized for the old
+	// fontSize=14 layout that produced ~30-mm tall nodes; with the
+	// current ~10-mm-tall nodes they looked proportionally huge.
 	nodeSpacing := in.NodeSpacing
 	if nodeSpacing == 0 {
-		nodeSpacing = 24
+		nodeSpacing = 8
 	}
 	layerSpacing := in.LayerSpacing
 	if layerSpacing == 0 {
-		layerSpacing = 40
+		layerSpacing = 12
 	}
 
 	// autog discovers nodes via edge endpoints. To support isolated
