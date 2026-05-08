@@ -37,12 +37,12 @@ func shapeKind(s NodeShape) displaylist.ShapeKind {
 // these padding values yield boxes that look balanced around 10pt
 // rendered text.
 func nodeSize(shape NodeShape, labelW, labelH float64) (w, h float64) {
-	padX, padY := 4.0, 3.0
+	padX, padY := 6.0, 4.0
 	switch shape {
 	case ShapeDiamond, ShapeCircle, ShapeDoubleCircle, ShapeHexagon:
-		padX, padY = 6.0, 5.0
+		padX, padY = 9.0, 7.0
 	case ShapeStadium, ShapeRound:
-		padX, padY = 5.0, 3.0
+		padX, padY = 7.0, 4.0
 	}
 	w = labelW + padX*2
 	h = labelH + padY*2
