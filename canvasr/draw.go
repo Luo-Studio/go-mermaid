@@ -85,15 +85,32 @@ func drawShape(ctx *canvas.Context, s displaylist.Shape, rs RoleStyle) {
 	case displaylist.ShapeKindCylinder:
 		ry := h * 0.12
 		cx := x + w/2
-		// Body rect.
-		ctx.DrawPath(x, y+ry, canvas.Rectangle(w, h-ry*2))
+		// Body fill (no stroke — the rect's top/bottom edges would
+		// sit on the rim equators and look like extra horizontal
+		// lines closing each ellipse).
+		if rs.Fill != nil {
+			savedStroke := rs.Stroke
+			ctx.SetStrokeColor(color.Transparent)
+			ctx.DrawPath(x, y+ry, canvas.Rectangle(w, h-ry*2))
+			ctx.SetStrokeColor(savedStroke)
+		}
+		// Side walls: two vertical strokes.
+		if rs.Stroke != nil {
+			leftWall := &canvas.Path{}
+			leftWall.MoveTo(0, 0)
+			leftWall.LineTo(0, h-ry*2)
+			ctx.SetFillColor(color.Transparent)
+			ctx.DrawPath(x, y+ry, leftWall)
+			rightWall := &canvas.Path{}
+			rightWall.MoveTo(0, 0)
+			rightWall.LineTo(0, h-ry*2)
+			ctx.DrawPath(x+w, y+ry, rightWall)
+		}
 		// Top: full ellipse (rim).
 		ctx.DrawPath(cx, y+ry, canvas.Ellipse(w/2, ry))
-		// Bottom: front-arc only. The back of the bottom is hidden by
-		// the body. We use a quadratic Bezier from (-rx, 0) through
-		// (0, ry) to (rx, 0) — coordinate-system-agnostic. Control
-		// point at (0, 2*ry) places the curve midpoint exactly at
-		// (0, ry).
+		// Bottom: front-arc only. We use a quadratic Bezier from
+		// (-rx, 0) through (0, ry) to (rx, 0). Control point at
+		// (0, 2*ry) places the curve midpoint exactly at (0, ry).
 		arc := &canvas.Path{}
 		arc.MoveTo(-w/2, 0)
 		arc.QuadTo(0, 2*ry, w/2, 0)

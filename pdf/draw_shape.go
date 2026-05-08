@@ -55,13 +55,22 @@ func drawShape(pdf *fpdf.Fpdf, s displaylist.Shape, tr func(displaylist.Rect) (f
 	case displaylist.ShapeKindCylinder:
 		ry := h * 0.12
 		cx := x + w/2
-		// Body rect spans from below the top rim to above the bottom curve.
-		pdf.Rect(x, y+ry, w, h-ry*2, fillStyle)
-		// Top: full ellipse (the rim — both curves visible).
+		// Fill the body separately (no stroke — the rect's top/bottom
+		// edges would sit on the rim equators and look like extra
+		// horizontal lines closing each ellipse).
+		if rs.FillR >= 0 {
+			pdf.Rect(x, y+ry, w, h-ry*2, "F")
+		}
+		// Side walls: just the two vertical strokes.
+		if rs.StrokeR >= 0 {
+			pdf.Line(x, y+ry, x, y+h-ry)
+			pdf.Line(x+w, y+ry, x+w, y+h-ry)
+		}
+		// Top rim: full ellipse (both curves visible).
 		pdf.Ellipse(cx, y+ry, w/2, ry, 0, fillStyle)
-		// Bottom: only the front-facing arc; the back is hidden by the body.
-		// fpdf angles are CCW from 3 o'clock; in a y-down page that means
-		// 0..180 sweeps right → bottom → left (the visible front curve).
+		// Bottom: only the front-facing arc; the back is hidden by the
+		// body. fpdf angles are CCW from 3 o'clock; in a y-down page
+		// that means 0..180 sweeps right → bottom → left.
 		pdf.Arc(cx, y+h-ry, w/2, ry, 0, 0, 180, "D")
 	case displaylist.ShapeKindStateBullet:
 		cx, cy := x+w/2, y+h/2
