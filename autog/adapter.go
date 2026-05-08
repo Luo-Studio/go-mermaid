@@ -79,11 +79,11 @@ func Layout(in Input) (out Output, err error) {
 	// current ~10-mm-tall nodes they looked proportionally huge.
 	nodeSpacing := in.NodeSpacing
 	if nodeSpacing == 0 {
-		nodeSpacing = 8
+		nodeSpacing = 14
 	}
 	layerSpacing := in.LayerSpacing
 	if layerSpacing == 0 {
-		layerSpacing = 12
+		layerSpacing = 20
 	}
 
 	// autog discovers nodes via edge endpoints. To support isolated

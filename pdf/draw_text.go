@@ -89,16 +89,29 @@ func drawText(pdf *fpdf.Fpdf, t displaylist.Text, tx func(displaylist.Point) (fl
 			lx = x - w/2
 		}
 		curX := lx
-		baselineY := startY + float64(i)*lineH
+		// Cell positions text by its top-left corner; baselineY was
+		// computed for pdf.Text (baseline-positioned). Convert back
+		// to top-left by subtracting the ascent portion (≈0.7*lineH).
+		topY := startY + float64(i)*lineH - lineH*0.7
+		// Save the cell margin and zero it so text runs sit flush —
+		// fpdf's default cell margin would add an asymmetric pad.
+		savedMargin := pdf.GetCellMargin()
+		pdf.SetCellMargin(0)
 		for _, r := range runs {
 			if r.emoji {
 				pdf.SetFont(emojiFont, "", rs.FontSize)
 			} else {
 				pdf.SetFont(rs.Font, rs.FontStyle, rs.FontSize)
 			}
-			pdf.Text(curX, baselineY, r.text)
-			curX += pdf.GetStringWidth(r.text)
+			runW := pdf.GetStringWidth(r.text)
+			pdf.SetXY(curX, topY)
+			// Cell draws the text in a (w, h) box. Bitmap-based emoji
+			// fonts (NotoColorEmoji) embed glyphs as images via Cell;
+			// pdf.Text doesn't trigger that path.
+			pdf.Cell(runW, lineH, r.text)
+			curX += runW
 		}
+		pdf.SetCellMargin(savedMargin)
 		// Leave the body font active for subsequent draws.
 		pdf.SetFont(rs.Font, rs.FontStyle, rs.FontSize)
 	}
