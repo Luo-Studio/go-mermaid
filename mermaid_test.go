@@ -44,6 +44,16 @@ func TestParseAndLayoutUnknownDiagram(t *testing.T) {
 // Once phases land, individual diagram types stop returning
 // ErrNotImplemented. We assert per-type below.
 
+func TestParseAndLayoutFlowchart(t *testing.T) {
+	dl, err := ParseAndLayout("flowchart TB\nA --> B\n", LayoutOptions{})
+	if err != nil {
+		t.Fatalf("ParseAndLayout: %v", err)
+	}
+	if dl == nil || len(dl.Items) == 0 {
+		t.Fatal("expected non-empty DisplayList")
+	}
+}
+
 func TestParseAndLayoutSequenceUnimplemented(t *testing.T) {
 	_, err := ParseAndLayout("sequenceDiagram\nA->>B: hi\n", LayoutOptions{})
 	if !errors.Is(err, ErrNotImplemented) {
@@ -60,9 +70,9 @@ func TestLayoutOptionsZeroValueValid(t *testing.T) {
 
 func TestLayoutOptionsDefaultMeasurerNotNil(t *testing.T) {
 	var opts LayoutOptions
-	m := opts.measurer()
+	m := opts.ResolveMeasurer()
 	if m == nil {
-		t.Fatal("opts.measurer() must never return nil")
+		t.Fatal("opts.ResolveMeasurer() must never return nil")
 	}
 	w, h := m.Measure("Hello", "")
 	if w <= 0 || h <= 0 {
@@ -77,7 +87,7 @@ func TestLayoutOptionsCustomMeasurerWins(t *testing.T) {
 		return 42, 42
 	})
 	opts := LayoutOptions{Measurer: custom}
-	w, h := opts.measurer().Measure("anything", "")
+	w, h := opts.ResolveMeasurer().Measure("anything", "")
 	if !called || w != 42 || h != 42 {
 		t.Fatalf("custom measurer was not preferred: called=%v w=%v h=%v", called, w, h)
 	}

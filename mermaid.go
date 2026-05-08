@@ -9,53 +9,17 @@ import (
 	"strings"
 
 	"github.com/luo-studio/go-mermaid/displaylist"
-	"github.com/luo-studio/go-mermaid/fontmetrics"
+	"github.com/luo-studio/go-mermaid/layoutopts"
 )
 
-// Measurer reports the rendered width and height of a string in the
-// caller's font for the given semantic Role. Implementations are
-// expected to be deterministic for the same input.
-type Measurer interface {
-	Measure(text string, role displaylist.Role) (w, h float64)
-}
+// LayoutOptions is the user-facing alias for layoutopts.Options.
+// Defined as a type alias so per-diagram-type packages can take the
+// same struct without importing this top-level package (which would
+// create an import cycle).
+type LayoutOptions = layoutopts.Options
 
-// LayoutOptions are common knobs shared across diagram types.
-type LayoutOptions struct {
-	// Measurer measures rendered text. If nil, layout uses the
-	// embedded Inter metrics measurer at FontSize.
-	Measurer Measurer
-
-	// FontSize used by the default Measurer in DisplayList units
-	// (typically points). Default: 14.
-	FontSize float64
-
-	// Padding around the diagram's bbox.
-	Padding float64
-
-	// NodeSpacing is the horizontal/sibling spacing autog uses.
-	NodeSpacing float64
-
-	// LayerSpacing is the vertical/cross-layer spacing autog uses.
-	LayerSpacing float64
-
-	// Sequence-specific spacing knobs. Ignored for non-sequence
-	// diagrams.
-	SequenceActorSpacing   float64
-	SequenceMessageSpacing float64
-}
-
-// measurer returns the Measurer to use: the explicit one if set,
-// otherwise a default backed by the embedded Inter metrics.
-func (o LayoutOptions) measurer() Measurer {
-	if o.Measurer != nil {
-		return o.Measurer
-	}
-	fs := o.FontSize
-	if fs <= 0 {
-		fs = 14
-	}
-	return fontmetrics.NewDefault(fs)
-}
+// Measurer is the user-facing alias for layoutopts.Measurer.
+type Measurer = layoutopts.Measurer
 
 // Errors.
 var (
