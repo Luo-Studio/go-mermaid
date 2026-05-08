@@ -69,9 +69,13 @@ func drawShape(pdf *fpdf.Fpdf, s displaylist.Shape, tr func(displaylist.Rect) (f
 		// Top rim: full ellipse (both curves visible).
 		pdf.Ellipse(cx, y+ry, w/2, ry, 0, fillStyle)
 		// Bottom: only the front-facing arc; the back is hidden by the
-		// body. fpdf angles are CCW from 3 o'clock; in a y-down page
-		// that means 0..180 sweeps right → bottom → left.
-		pdf.Arc(cx, y+h-ry, w/2, ry, 0, 0, 180, "D")
+		// body. fpdf.Arc angles are measured in PDF-space (y-up), so
+		// in a y-down page the sweep that visually goes right → DOWN
+		// → left is 180..360 (where t=270 is the visually-down point).
+		// Our previous 0..180 sweep was actually drawing the top-of-
+		// the-bottom-ellipse, hidden inside the body — making the
+		// cylinder look like it had no bottom curve at all.
+		pdf.Arc(cx, y+h-ry, w/2, ry, 0, 180, 360, "D")
 	case displaylist.ShapeKindStateBullet:
 		cx, cy := x+w/2, y+h/2
 		r := w / 3
