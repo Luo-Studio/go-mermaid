@@ -1,0 +1,90 @@
+package mermaid
+
+import (
+	"errors"
+	"testing"
+
+	"github.com/luo-studio/go-mermaid/displaylist"
+)
+
+func TestDetectType(t *testing.T) {
+	cases := []struct {
+		name string
+		src  string
+		want diagramType
+	}{
+		{"flowchart-TB", "flowchart TB\n  A --> B\n", typeFlowchart},
+		{"graph-LR", "graph LR\n  A --> B\n", typeFlowchart},
+		{"sequence", "sequenceDiagram\n  A->>B: hi\n", typeSequence},
+		{"class", "classDiagram\n  A <|-- B\n", typeClass},
+		{"er", "erDiagram\n  A ||--o{ B : has\n", typeER},
+		{"state-v2", "stateDiagram-v2\n  [*] --> S\n", typeState},
+		{"state", "stateDiagram\n  [*] --> S\n", typeState},
+		{"unknown", "garbage\n", typeUnknown},
+		{"empty", "", typeUnknown},
+		{"comments-then-flowchart", "%% comment\nflowchart TB\nA --> B", typeFlowchart},
+		{"leading-blank-lines", "\n\nflowchart TB\nA --> B", typeFlowchart},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := detectType(tc.src); got != tc.want {
+				t.Errorf("detectType(%q) = %v, want %v", tc.src, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParseAndLayoutUnknownDiagram(t *testing.T) {
+	_, err := ParseAndLayout("not a diagram", LayoutOptions{})
+	if !errors.Is(err, ErrUnknownDiagram) {
+		t.Fatalf("expected ErrUnknownDiagram, got %v", err)
+	}
+}
+
+// Once phases land, individual diagram types stop returning
+// ErrNotImplemented. We assert per-type below.
+
+func TestParseAndLayoutSequenceUnimplemented(t *testing.T) {
+	_, err := ParseAndLayout("sequenceDiagram\nA->>B: hi\n", LayoutOptions{})
+	if !errors.Is(err, ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented, got %v", err)
+	}
+}
+
+func TestLayoutOptionsZeroValueValid(t *testing.T) {
+	var opts LayoutOptions
+	if opts.Measurer != nil {
+		t.Fatal("zero LayoutOptions should have nil Measurer")
+	}
+}
+
+func TestLayoutOptionsDefaultMeasurerNotNil(t *testing.T) {
+	var opts LayoutOptions
+	m := opts.measurer()
+	if m == nil {
+		t.Fatal("opts.measurer() must never return nil")
+	}
+	w, h := m.Measure("Hello", "")
+	if w <= 0 || h <= 0 {
+		t.Fatalf("default measurer should report positive metrics, got %vx%v", w, h)
+	}
+}
+
+func TestLayoutOptionsCustomMeasurerWins(t *testing.T) {
+	called := false
+	custom := measurerFunc(func(text string, role displaylist.Role) (float64, float64) {
+		called = true
+		return 42, 42
+	})
+	opts := LayoutOptions{Measurer: custom}
+	w, h := opts.measurer().Measure("anything", "")
+	if !called || w != 42 || h != 42 {
+		t.Fatalf("custom measurer was not preferred: called=%v w=%v h=%v", called, w, h)
+	}
+}
+
+type measurerFunc func(text string, role displaylist.Role) (float64, float64)
+
+func (f measurerFunc) Measure(text string, role displaylist.Role) (float64, float64) {
+	return f(text, role)
+}
