@@ -102,6 +102,10 @@ func DrawInto(pdf *fpdf.Fpdf, dl *displaylist.DisplayList, x, y float64, opts Em
 	if err := ensureInterFont(pdf); err != nil {
 		return err
 	}
+	// Best-effort: if a system emoji TTF is installed, register it so
+	// drawText can switch fonts for emoji runs. Failure is silent —
+	// drawText falls back to stripping emoji glyphs.
+	ensureEmojiFont(pdf)
 	style := opts.Style
 	hasExplicitStyle := len(style.Roles) > 0 || style.Default.Font != "" || style.Default.StrokeWidth != 0
 	if !hasExplicitStyle {
