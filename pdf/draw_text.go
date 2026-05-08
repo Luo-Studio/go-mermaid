@@ -6,7 +6,7 @@ import (
 	"github.com/luo-studio/go-mermaid/displaylist"
 )
 
-func drawText(pdf *fpdf.Fpdf, t displaylist.Text, tx func(displaylist.Point) (float64, float64), rs RoleStyle) {
+func drawText(pdf *fpdf.Fpdf, t displaylist.Text, tx func(displaylist.Point) (float64, float64), rs RoleStyle, emojiFont string) {
 	if len(t.Lines) == 0 {
 		return
 	}
@@ -35,7 +35,7 @@ func drawText(pdf *fpdf.Fpdf, t displaylist.Text, tx func(displaylist.Point) (fl
 		startY = y - totalH/2 + lineH*0.7
 	}
 
-	emojiAvailable := ensureEmojiFont(pdf)
+	emojiAvailable := emojiFont != ""
 
 	// measureRuns returns the total rendered width of runs by
 	// switching fonts before each GetStringWidth call.
@@ -46,7 +46,7 @@ func drawText(pdf *fpdf.Fpdf, t displaylist.Text, tx func(displaylist.Point) (fl
 				if !emojiAvailable {
 					continue
 				}
-				pdf.SetFont(EmojiFontFamily, "", rs.FontSize)
+				pdf.SetFont(emojiFont, "", rs.FontSize)
 			} else {
 				pdf.SetFont(rs.Font, rs.FontStyle, rs.FontSize)
 			}
@@ -92,7 +92,7 @@ func drawText(pdf *fpdf.Fpdf, t displaylist.Text, tx func(displaylist.Point) (fl
 		baselineY := startY + float64(i)*lineH
 		for _, r := range runs {
 			if r.emoji {
-				pdf.SetFont(EmojiFontFamily, "", rs.FontSize)
+				pdf.SetFont(emojiFont, "", rs.FontSize)
 			} else {
 				pdf.SetFont(rs.Font, rs.FontStyle, rs.FontSize)
 			}

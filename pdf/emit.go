@@ -43,6 +43,20 @@ type EmbedOptions struct {
 	// diagram's bbox before drawing. Useful for dark themes; harmless
 	// for light themes.
 	FillBackground bool
+
+	// BodyFont names an fpdf font family the caller has already
+	// registered (e.g. its own embedded Inter). When set, DrawInto
+	// uses that family for body text and skips registering its own
+	// copy. Empty = register and use the embedded Inter under
+	// FontFamily ("go-mermaid-inter").
+	BodyFont string
+
+	// EmojiFont names an fpdf font family the caller has already
+	// registered for emoji rendering (e.g. NotoColorEmoji). When
+	// set, DrawInto uses that family for emoji runs and skips
+	// looking for a system emoji TTF. Empty = best-effort load
+	// from a known set of paths under EmojiFontFamily.
+	EmojiFont string
 }
 
 // EmbedDefaults returns sensible defaults (DefaultStyle, no cap).
@@ -96,16 +110,22 @@ func DrawInto(pdf *fpdf.Fpdf, dl *displaylist.DisplayList, x, y float64, opts Em
 	if dl == nil || len(dl.Items) == 0 {
 		return nil
 	}
-	// Register the embedded Inter UTF-8 font once per fpdf doc so
-	// labels with non-Latin-1 characters (emoji, CJK, …) render
-	// correctly. Idempotent.
-	if err := ensureInterFont(pdf); err != nil {
-		return err
+	// Resolve which fpdf font families to use for body text and emoji.
+	// If the caller has already registered fonts (e.g. the platform's
+	// PDF lib registers Inter and NotoColorEmoji once at boot), use
+	// those names directly so we don't load the same TTF twice. If no
+	// override is given, fall back to registering our embedded Inter
+	// (and best-effort loading a system emoji TTF).
+	bodyFont, emojiFont := opts.BodyFont, opts.EmojiFont
+	if bodyFont == "" {
+		if err := ensureInterFont(pdf); err != nil {
+			return err
+		}
+		bodyFont = FontFamily
 	}
-	// Best-effort: if a system emoji TTF is installed, register it so
-	// drawText can switch fonts for emoji runs. Failure is silent —
-	// drawText falls back to stripping emoji glyphs.
-	ensureEmojiFont(pdf)
+	if emojiFont == "" && ensureEmojiFont(pdf) {
+		emojiFont = EmojiFontFamily
+	}
 	style := opts.Style
 	hasExplicitStyle := len(style.Roles) > 0 || style.Default.Font != "" || style.Default.StrokeWidth != 0
 	if !hasExplicitStyle {
@@ -119,6 +139,9 @@ func DrawInto(pdf *fpdf.Fpdf, dl *displaylist.DisplayList, x, y float64, opts Em
 			style = DefaultStyle()
 		}
 	}
+	// Override the body font in the resolved style with the caller-
+	// supplied (or just-registered) family so drawText uses it.
+	style = retargetFonts(style, bodyFont)
 	// One DisplayList unit = one fpdf unit by default. Width/Height
 	// (if set) take precedence — the diagram is scaled to fit within
 	// that box, aspect preserved. Otherwise MaxWidth applies as a
@@ -169,7 +192,7 @@ func DrawInto(pdf *fpdf.Fpdf, dl *displaylist.DisplayList, x, y float64, opts Em
 	for _, it := range dl.Items {
 		switch v := it.(type) {
 		case displaylist.Text:
-			drawText(pdf, v, tx, style.lookup(v.Role))
+			drawText(pdf, v, tx, style.lookup(v.Role), emojiFont)
 		case displaylist.Cluster, displaylist.Shape, displaylist.Edge, displaylist.Marker:
 			// already handled
 		default:

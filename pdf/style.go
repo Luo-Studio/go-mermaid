@@ -37,6 +37,26 @@ func (s Style) lookup(role displaylist.Role) RoleStyle {
 	return s.Default
 }
 
+// retargetFonts returns a copy of s with every RoleStyle's Font
+// rewritten to family. Used by DrawInto to plug the caller-supplied
+// (or just-registered) body font into the resolved style without
+// forcing callers to set Font on every Role themselves.
+func retargetFonts(s Style, family string) Style {
+	if family == "" {
+		return s
+	}
+	out := s
+	out.Default.Font = family
+	if s.Roles != nil {
+		out.Roles = make(map[displaylist.Role]RoleStyle, len(s.Roles))
+		for k, v := range s.Roles {
+			v.Font = family
+			out.Roles[k] = v
+		}
+	}
+	return out
+}
+
 // DefaultStyle returns a sensible black-on-white style.
 func DefaultStyle() Style {
 	body := RoleStyle{
