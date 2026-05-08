@@ -1,4 +1,4 @@
-// Package autog wraps github.com/nulab/autog with a smaller surface
+// Package autog wraps github.com/Luo-Studio/autog with a smaller surface
 // suited to go-mermaid's layout stage. It is a thin adapter — no
 // cluster recursion (added in Phase 3), no per-diagram-type
 // knowledge.
@@ -9,8 +9,8 @@ import (
 	"math"
 	"runtime"
 
-	upstream "github.com/nulab/autog"
-	upgraph "github.com/nulab/autog/graph"
+	upstream "github.com/Luo-Studio/autog"
+	upgraph "github.com/Luo-Studio/autog/graph"
 )
 
 // Direction matches Mermaid's flowchart direction.
@@ -128,20 +128,19 @@ func Layout(in Input) (out Output, err error) {
 		upstream.WithNodeSize(sizes),
 		upstream.WithNodeSpacing(nodeSpacing),
 		upstream.WithLayerSpacing(layerSpacing),
-		// SinkColoring is a Brandes-Köpf variant that aligns nodes
-		// bottom-up with long vertical edge paths — it's the only
-		// upstream option that takes node widths into account when
-		// placing nodes within a layer, so chain centres line up and
-		// edges stay straight even when widths differ. Trade-off: it
-		// can left-bias parents for very-high fan-out trees.
-		upstream.WithPositioning(upstream.PositioningSinkColoring),
-		// Orthogonal edge routing: edges bend at 90° rather than
-		// running straight diagonals between non-aligned centres.
-		// Even when node-X positions don't perfectly match across
-		// ranks, the right-angle paths look intentional and clean,
-		// and high-fan-out trees get the classic dendrogram look
-		// (one trunk down to the inter-rank midline, then branches).
-		upstream.WithEdgeRouting(upstream.EdgeRoutingOrtho),
+		// BrandesKoepf averages four alignment passes (left-up,
+		// left-down, right-up, right-down). It centres parents over
+		// their children's bounding box more reliably than
+		// NetworkSimplex (which can still bias toward the leftmost
+		// child) and avoids SinkColoring's strong left-bias for
+		// fan-outs. Any chain alignment offsets are masked by
+		// orthogonal edge routing below.
+		upstream.WithPositioning(upstream.PositioningBrandesKoepf),
+		// Spline edge routing: piece-wise cubic Bézier curves that
+		// route around obstacle nodes natively. Each edge comes back
+		// as 1+3N points (start, then groups of two control points
+		// + an endpoint per Bézier segment).
+		upstream.WithEdgeRouting(upstream.EdgeRoutingSplines),
 	)
 
 	// Determine post-layout coordinate flip for direction. autog's
@@ -229,6 +228,7 @@ func Layout(in Input) (out Output, err error) {
 	// Apply direction transform. autog's default = TB; transform the
 	// coordinates of nodes and edge points in-place.
 	transformDirection(in.Direction, &out, maxX, maxY)
+
 
 	out.Width = out.Width + in.Padding*2
 	out.Height = out.Height + in.Padding*2

@@ -22,6 +22,8 @@ github.com/ByteArena/poly2tri-go v0.0.0-20170716161910-d102ad91854f h1:l7moT9o/v
 github.com/ByteArena/poly2tri-go v0.0.0-20170716161910-d102ad91854f/go.mod h1:vIOkSdX3NDCPwgu8FIuTat2zDF0FPXXQ0RYFRy+oQic=
 github.com/Kagami/go-avif v0.1.0 h1:8GHAGLxCdFfhpd4Zg8j1EqO7rtcQNenxIDerC/uu68w=
 github.com/Kagami/go-avif v0.1.0/go.mod h1:OPmPqzNdQq3+sXm0HqaUJQ9W/4k+Elbc3RSfJUemDKA=
+github.com/Luo-Studio/autog v0.0.0-20260508201329-fa3c7bce29a9 h1:BH/NaVLorhNoX62r4bVtPJ3iYqYHcNi7fbTmFHPNUg8=
+github.com/Luo-Studio/autog v0.0.0-20260508201329-fa3c7bce29a9/go.mod h1:LULWiVeV/lka49Nzo5+QDh4NkYrpONQlzYOn2CSCPs8=
 github.com/ajstarks/svgo v0.0.0-20211024235047-1546f124cd8b h1:slYM766cy2nI3BwyRiyQj/Ud48djTMtMebDqepE95rw=
 github.com/ajstarks/svgo v0.0.0-20211024235047-1546f124cd8b/go.mod h1:1KcenG0jGWcpt8ov532z81sp/kMMUG485J2InIOyADM=
 github.com/andybalholm/brotli v1.2.1 h1:R+f5xP285VArJDRgowrfb9DqL18yVK0gKAW/F+eTWro=
@@ -46,8 +48,6 @@ github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0/go.mod h1:E/TSTwGw
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/kolesa-team/go-webp v1.0.5 h1:GZQHJBaE8dsNKZltfwqsL0qVJ7vqHXsfA+4AHrQW3pE=
 github.com/kolesa-team/go-webp v1.0.5/go.mod h1:QmJu0YHXT3ex+4SgUvs+a+1SFCDcCqyZg+LbIuNNTnE=
-github.com/nulab/autog v0.11.0 h1:1w8BNrUisUKH+bp2C2rA8ITOhjhOfhXUaWDgUrh8DeU=
-github.com/nulab/autog v0.11.0/go.mod h1:TpDSpSHSnYARdruVLdlNEwLS8jknWb224gLBfAFqr/8=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
