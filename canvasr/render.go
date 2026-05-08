@@ -15,11 +15,17 @@ import (
 
 // RenderOptions configures rasterization / vector emission.
 type RenderOptions struct {
-	Style    Style
-	Layout   layoutopts.Options
+	Style  Style
+	Theme  string
+	Layout layoutopts.Options
+
 	DPI      float64
 	MaxWidth float64
 	Padding  float64
+
+	// FillBackground paints the theme background across the canvas
+	// before drawing. Defaults to true when Theme is set.
+	FillBackground bool
 }
 
 // RenderPNG parses src, lays it out, and returns PNG bytes.
@@ -72,11 +78,19 @@ func RenderSVG(src string, opts RenderOptions) ([]byte, error) {
 
 func buildCanvas(dl *displaylist.DisplayList, opts *RenderOptions) (*canvas.Canvas, error) {
 	if opts.Style.FontFamily == nil {
-		st, err := DefaultStyle()
-		if err != nil {
-			return nil, err
+		if opts.Theme != "" {
+			st, err := StyleFromTheme(opts.Theme)
+			if err != nil {
+				return nil, err
+			}
+			opts.Style = st
+		} else {
+			st, err := DefaultStyle()
+			if err != nil {
+				return nil, err
+			}
+			opts.Style = st
 		}
-		opts.Style = st
 	}
 	pad := opts.Padding
 	w := dl.Width + pad*2
@@ -92,6 +106,18 @@ func buildCanvas(dl *displaylist.DisplayList, opts *RenderOptions) (*canvas.Canv
 	// DisplayList: y grows DOWN. tdewolff/canvas: y grows UP from
 	// origin. We flip Y by translating to the top and scaling -1.
 	ctx.SetCoordSystem(canvas.CartesianIV)
+
+	// Page background: draw before translating so the fill covers the
+	// entire canvas including the padding margin. When a theme is set
+	// we always paint the background (otherwise dark themes show
+	// black-on-transparent).
+	if opts.Theme != "" {
+		bg := PageBackground(opts.Theme)
+		ctx.SetFillColor(bg)
+		ctx.SetStrokeColor(canvas.Transparent)
+		ctx.DrawPath(0, 0, canvas.Rectangle(w, h))
+	}
+
 	ctx.Translate(pad, pad)
 
 	for _, it := range dl.Items {

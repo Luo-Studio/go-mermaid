@@ -13,7 +13,13 @@ import (
 // EmbedOptions configures DrawMermaid / DrawInto.
 type EmbedOptions struct {
 	// Style maps DisplayList roles to fpdf colors / fonts / widths.
+	// If Theme is also set, Style overrides the theme.
 	Style Style
+
+	// Theme picks one of the named palettes from the theme package
+	// ("dracula", "tokyo-night", "github-light", ...). Empty = default.
+	// Resolved into Style at draw time.
+	Theme string
 
 	// Layout knobs forwarded to mermaid.ParseAndLayout.
 	Layout layoutopts.Options
@@ -25,6 +31,11 @@ type EmbedOptions struct {
 
 	// Padding around the diagram (in fpdf's current unit).
 	Padding float64
+
+	// FillBackground paints the theme's background color across the
+	// diagram's bbox before drawing. Useful for dark themes; harmless
+	// for light themes.
+	FillBackground bool
 }
 
 // EmbedDefaults returns sensible defaults (DefaultStyle, no cap).
@@ -47,8 +58,24 @@ func DrawInto(pdf *fpdf.Fpdf, dl *displaylist.DisplayList, x, y float64, opts Em
 		return nil
 	}
 	style := opts.Style
-	if len(style.Roles) == 0 && style.Default.Font == "" && style.Default.StrokeWidth == 0 {
-		style = DefaultStyle()
+	hasExplicitStyle := len(style.Roles) > 0 || style.Default.Font != "" || style.Default.StrokeWidth != 0
+	if !hasExplicitStyle {
+		if opts.Theme != "" {
+			ts, err := StyleFromTheme(opts.Theme)
+			if err != nil {
+				return err
+			}
+			style = ts
+		} else {
+			style = DefaultStyle()
+		}
+	}
+	if opts.FillBackground && opts.Theme != "" {
+		br, bg, bb := PageBackground(opts.Theme)
+		pdf.SetFillColor(br, bg, bb)
+		// Bg covers diagram bbox plus padding.
+		pad := opts.Padding
+		pdf.Rect(x, y, dl.Width+pad*2, dl.Height+pad*2, "F")
 	}
 
 	// One DisplayList unit = one fpdf unit. Callers wanting a
