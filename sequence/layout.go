@@ -2,6 +2,7 @@ package sequence
 
 import (
 	"github.com/luo-studio/go-mermaid/displaylist"
+	"github.com/luo-studio/go-mermaid/internal/textutil"
 	"github.com/luo-studio/go-mermaid/layoutopts"
 )
 
@@ -168,7 +169,7 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 			midX := (x0 + x1) / 2
 			dl.Items = append(dl.Items, displaylist.Text{
 				Pos:    displaylist.Point{X: midX, Y: cursorY - 3},
-				Lines:  []string{m.Label},
+				Lines:  textutil.SplitLabelLines(m.Label),
 				Align:  displaylist.AlignCenter,
 				VAlign: displaylist.VAlignBottom,
 				Role:   displaylist.RoleMessageLabel,
@@ -250,7 +251,7 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 		})
 		dl.Items = append(dl.Items, displaylist.Text{
 			Pos:    displaylist.Point{X: x + w/2, Y: cursorY + h/2},
-			Lines:  []string{text},
+			Lines:  textutil.SplitLabelLines(text),
 			Align:  displaylist.AlignCenter,
 			VAlign: displaylist.VAlignMiddle,
 			Role:   displaylist.RoleNoteText,
@@ -281,7 +282,7 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 			if labelText != "" {
 				dl.Items = append(dl.Items, displaylist.Text{
 					Pos:    displaylist.Point{X: 8, Y: dividerY + 8},
-					Lines:  []string{labelText},
+					Lines:  textutil.SplitLabelLines(labelText),
 					Align:  displaylist.AlignLeft,
 					VAlign: displaylist.VAlignTop,
 					Role:   labelRole,
@@ -357,7 +358,7 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 		})
 		dl.Items = append(dl.Items, displaylist.Text{
 			Pos:    displaylist.Point{X: a.centre, Y: a.boxY + actorBoxH/2},
-			Lines:  []string{a.label},
+			Lines:  textutil.SplitLabelLines(a.label),
 			Align:  displaylist.AlignCenter,
 			VAlign: displaylist.VAlignMiddle,
 			Role:   displaylist.RoleActorTitle,
@@ -370,7 +371,7 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 		})
 		dl.Items = append(dl.Items, displaylist.Text{
 			Pos:    displaylist.Point{X: a.centre, Y: footerY + actorBoxH/2},
-			Lines:  []string{a.label},
+			Lines:  textutil.SplitLabelLines(a.label),
 			Align:  displaylist.AlignCenter,
 			VAlign: displaylist.VAlignMiddle,
 			Role:   displaylist.RoleActorTitle,

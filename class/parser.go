@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/luo-studio/go-mermaid/internal/textutil"
 )
 
 // Parse turns Mermaid classDiagram source into a Diagram.
@@ -132,7 +134,7 @@ func parseBody(d *Diagram, lines []string) error {
 			label := m[2]
 			c := getOrAddClass(id)
 			if label != "" {
-				c.Label = label
+				c.Label = textutil.CleanLabel(label)
 			}
 			if ns := currentNS(); ns != "" {
 				c.Namespace = ns
@@ -154,7 +156,7 @@ func parseBody(d *Diagram, lines []string) error {
 				FromCard: m[2],
 				ToCard:   m[4],
 				To:       m[5],
-				Label:    m[6],
+				Label:    textutil.CleanLabel(m[6]),
 			}
 			rel.Kind, rel.Dashed = parseRelOp(m[3])
 			// Some operators imply swap (e.g. `--*` is composition with

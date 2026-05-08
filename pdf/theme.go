@@ -34,7 +34,7 @@ func styleFromResolved(r theme.Resolved) Style {
 		StrokeWidth: 0.3,
 		FillR:       float64(r.NodeFill.R), FillG: float64(r.NodeFill.G), FillB: float64(r.NodeFill.B),
 		TextR: float64(r.Text.R), TextG: float64(r.Text.G), TextB: float64(r.Text.B),
-		Font:     "Helvetica",
+		Font: FontFamily,
 		FontSize: 10,
 	}
 	bodyBold := body
@@ -73,7 +73,7 @@ func styleFromResolved(r theme.Resolved) Style {
 		StrokeR: -1, StrokeG: -1, StrokeB: -1,
 		FillR: -1, FillG: -1, FillB: -1,
 		TextR: float64(r.TextFaint.R), TextG: float64(r.TextFaint.G), TextB: float64(r.TextFaint.B),
-		Font: "Helvetica", FontStyle: "I", FontSize: 9,
+		Font: FontFamily, FontStyle: "I", FontSize: 9,
 	}
 
 	pseudo := body

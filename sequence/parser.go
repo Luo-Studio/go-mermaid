@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/luo-studio/go-mermaid/internal/textutil"
 )
 
 // Parse turns Mermaid sequenceDiagram source into a Diagram.
@@ -78,7 +80,7 @@ func parseBody(d *Diagram, lines []string) error {
 		case participantRE.MatchString(line):
 			m := participantRE.FindStringSubmatch(line)
 			id := m[2]
-			label := m[3]
+			label := textutil.CleanLabel(m[3])
 			if label == "" {
 				label = id
 			}
@@ -117,7 +119,7 @@ func parseBody(d *Diagram, lines []string) error {
 			*current.active = append(*current.active, &Note{
 				Side:   side,
 				Actors: actors,
-				Text:   m[3],
+				Text:   textutil.CleanLabel(m[3]),
 			})
 		case blockStartRE.MatchString(line):
 			m := blockStartRE.FindStringSubmatch(line)
@@ -165,7 +167,7 @@ func parseBody(d *Diagram, lines []string) error {
 			msg := &Message{
 				From:  from,
 				To:    to,
-				Label: text,
+				Label: textutil.CleanLabel(text),
 				Arrow: arrow,
 			}
 			switch actMark {

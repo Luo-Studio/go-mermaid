@@ -3,6 +3,7 @@ package state
 import (
 	"github.com/luo-studio/go-mermaid/autog"
 	"github.com/luo-studio/go-mermaid/displaylist"
+	"github.com/luo-studio/go-mermaid/internal/textutil"
 	"github.com/luo-studio/go-mermaid/layoutopts"
 )
 
@@ -121,7 +122,7 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 			})
 			dl.Items = append(dl.Items, displaylist.Text{
 				Pos:    displaylist.Point{X: bbox.X + bbox.W/2, Y: bbox.Y + bbox.H/2},
-				Lines:  []string{s.Label},
+				Lines:  textutil.SplitLabelLines(s.Label),
 				Align:  displaylist.AlignCenter,
 				VAlign: displaylist.VAlignMiddle,
 				Role:   displaylist.RoleStateBox,
@@ -152,7 +153,7 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 			}
 			dl.Items = append(dl.Items, displaylist.Text{
 				Pos:    mid,
-				Lines:  []string{t.Label},
+				Lines:  textutil.SplitLabelLines(t.Label),
 				Align:  displaylist.AlignCenter,
 				VAlign: displaylist.VAlignBottom,
 				Role:   displaylist.RoleEdgeLabel,
