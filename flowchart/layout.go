@@ -3,6 +3,7 @@ package flowchart
 import (
 	"github.com/luo-studio/go-mermaid/autog"
 	"github.com/luo-studio/go-mermaid/displaylist"
+	"github.com/luo-studio/go-mermaid/internal/textutil"
 	"github.com/luo-studio/go-mermaid/layoutopts"
 )
 
@@ -19,7 +20,17 @@ func Layout(d *Diagram, opts layoutopts.Options) *displaylist.DisplayList {
 
 	autogNodes := make([]autog.Node, 0, len(d.Nodes))
 	for _, n := range d.Nodes {
-		lw, lh := measurer.Measure(n.Label, displaylist.RoleNode)
+		// For multi-line labels (from <br/>), use the widest line and
+		// stack heights so the box fits all rows.
+		lines := splitLabelLines(n.Label)
+		var lw, lh float64
+		for _, ln := range lines {
+			w0, h0 := measurer.Measure(ln, displaylist.RoleNode)
+			if w0 > lw {
+				lw = w0
+			}
+			lh += h0
+		}
 		w, h := nodeSize(n.Shape, lw, lh)
 		autogNodes = append(autogNodes, autog.Node{ID: n.ID, Width: w, Height: h})
 	}
@@ -120,13 +131,16 @@ func emitNodes(dl *displaylist.DisplayList, nodes []autog.Node, d *Diagram) {
 		dl.Items = append(dl.Items, shape)
 		dl.Items = append(dl.Items, displaylist.Text{
 			Pos:    displaylist.Point{X: bbox.X + bbox.W/2, Y: bbox.Y + bbox.H/2},
-			Lines:  []string{ast.Label},
+			Lines:  splitLabelLines(ast.Label),
 			Align:  displaylist.AlignCenter,
 			VAlign: displaylist.VAlignMiddle,
 			Role:   displaylist.RoleNode,
 		})
 	}
 }
+
+// splitLabelLines is a thin alias for textutil.SplitLabelLines.
+var splitLabelLines = textutil.SplitLabelLines
 
 func emitEdges(dl *displaylist.DisplayList, edges []autog.Edge, d *Diagram) {
 	for _, e := range edges {
@@ -145,7 +159,7 @@ func emitEdges(dl *displaylist.DisplayList, edges []autog.Edge, d *Diagram) {
 		if ast.Label != "" && len(points) > 0 {
 			dl.Items = append(dl.Items, displaylist.Text{
 				Pos:    midpoint(points),
-				Lines:  []string{ast.Label},
+				Lines:  splitLabelLines(ast.Label),
 				Align:  displaylist.AlignCenter,
 				VAlign: displaylist.VAlignMiddle,
 				Role:   displaylist.RoleEdgeLabel,

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/luo-studio/go-mermaid/internal/textutil"
 )
 
 // Parse turns Mermaid flowchart source into a Diagram.
@@ -298,7 +300,7 @@ func tryInline(re *regexp.Regexp, base EdgeStyle, line string) (left, right stri
 	label := line[loc[4]:loc[5]]
 	opEnd := line[loc[6]:loc[7]]
 
-	e = Edge{Style: base, Label: strings.TrimSpace(label)}
+	e = Edge{Style: base, Label: cleanLabel(label)}
 	e.ArrowStart = strings.HasPrefix(opStart, "<")
 	e.ArrowEnd = strings.HasSuffix(opEnd, ">")
 	return leftPart, rightPart, e, true
@@ -315,7 +317,7 @@ func takePipeLabel(right string, e *Edge) string {
 	if end < 0 {
 		return right
 	}
-	e.Label = strings.TrimSpace(right[1 : 1+end])
+	e.Label = cleanLabel(right[1 : 1+end])
 	return strings.TrimSpace(right[1+end+1:])
 }
 
@@ -327,7 +329,7 @@ func parseNodeDecl(s string) (Node, error) {
 	}
 	for _, sp := range shapePatterns {
 		if m := sp.re.FindStringSubmatch(s); m != nil {
-			n := Node{ID: m[1], Label: m[2], Shape: sp.shape}
+			n := Node{ID: m[1], Label: cleanLabel(m[2]), Shape: sp.shape}
 			rest := s[len(m[0]):]
 			if cm := classShorthandRE.FindStringSubmatch(rest); cm != nil {
 				n.ClassNames = append(n.ClassNames, cm[1])
@@ -370,11 +372,20 @@ func splitCommaList(s string) []string {
 func parseSubgraphHeader(rest string) (id, label string) {
 	rest = strings.TrimSpace(rest)
 	if i := strings.IndexAny(rest, "[\""); i >= 0 {
-		id = strings.TrimSpace(rest[:i])
-		labelPart := rest[i:]
-		labelPart = strings.TrimSpace(labelPart)
+		idPart := strings.TrimSpace(rest[:i])
+		labelPart := strings.TrimSpace(rest[i:])
 		labelPart = strings.Trim(labelPart, "[]\"")
-		return id, labelPart
+		labelPart = cleanLabel(labelPart)
+		// `subgraph "Quoted Name"` (no separate ID): use the label as
+		// both ID and display label so cluster lookups work.
+		if idPart == "" {
+			return labelPart, labelPart
+		}
+		return idPart, labelPart
 	}
-	return rest, rest
+	return rest, cleanLabel(rest)
 }
+
+// cleanLabel is a thin wrapper over textutil.CleanLabel so existing
+// call sites stay terse.
+var cleanLabel = textutil.CleanLabel

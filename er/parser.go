@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/luo-studio/go-mermaid/internal/textutil"
 )
 
 // Parse turns Mermaid erDiagram source into a Diagram.
@@ -67,7 +69,7 @@ func parseBody(d *Diagram, lines []string) error {
 				attr := Attribute{
 					Type:    m[1],
 					Name:    m[2],
-					Comment: m[4],
+					Comment: textutil.CleanLabel(m[4]),
 				}
 				switch m[3] {
 				case "PK":
@@ -103,7 +105,7 @@ func parseBody(d *Diagram, lines []string) error {
 				LeftCardinality:  leftCard,
 				RightCardinality: rightCard,
 				Identifying:      m[3] == "--",
-				Label:            m[6],
+				Label:            textutil.CleanLabel(m[6]),
 			}
 			getOrAddEntity(m[1])
 			getOrAddEntity(m[5])

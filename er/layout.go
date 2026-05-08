@@ -3,6 +3,7 @@ package er
 import (
 	"github.com/luo-studio/go-mermaid/autog"
 	"github.com/luo-studio/go-mermaid/displaylist"
+	"github.com/luo-studio/go-mermaid/internal/textutil"
 	"github.com/luo-studio/go-mermaid/layoutopts"
 )
 
@@ -72,7 +73,7 @@ func emitEntity(dl *displaylist.DisplayList, e Entity, b displaylist.Rect) {
 	})
 	dl.Items = append(dl.Items, displaylist.Text{
 		Pos:    displaylist.Point{X: b.X + b.W/2, Y: b.Y + 11},
-		Lines:  []string{e.ID},
+		Lines:  textutil.SplitLabelLines(e.ID),
 		Align:  displaylist.AlignCenter,
 		VAlign: displaylist.VAlignMiddle,
 		Role:   displaylist.RoleEntityBox,
@@ -88,7 +89,7 @@ func emitEntity(dl *displaylist.DisplayList, e Entity, b displaylist.Rect) {
 	for _, a := range e.Attributes {
 		dl.Items = append(dl.Items, displaylist.Text{
 			Pos:    displaylist.Point{X: b.X + 6, Y: cy},
-			Lines:  []string{formatAttribute(a)},
+			Lines:  textutil.SplitLabelLines(formatAttribute(a)),
 			Align:  displaylist.AlignLeft,
 			VAlign: displaylist.VAlignMiddle,
 			Role:   displaylist.RoleEntityAttribute,
@@ -129,7 +130,7 @@ func emitRelationship(dl *displaylist.DisplayList, e autog.Edge, r *Relationship
 		}
 		dl.Items = append(dl.Items, displaylist.Text{
 			Pos:    mid,
-			Lines:  []string{r.Label},
+			Lines:  textutil.SplitLabelLines(r.Label),
 			Align:  displaylist.AlignCenter,
 			VAlign: displaylist.VAlignBottom,
 			Role:   displaylist.RoleEdgeLabel,

@@ -96,6 +96,12 @@ func DrawInto(pdf *fpdf.Fpdf, dl *displaylist.DisplayList, x, y float64, opts Em
 	if dl == nil || len(dl.Items) == 0 {
 		return nil
 	}
+	// Register the embedded Inter UTF-8 font once per fpdf doc so
+	// labels with non-Latin-1 characters (emoji, CJK, …) render
+	// correctly. Idempotent.
+	if err := ensureInterFont(pdf); err != nil {
+		return err
+	}
 	style := opts.Style
 	hasExplicitStyle := len(style.Roles) > 0 || style.Default.Font != "" || style.Default.StrokeWidth != 0
 	if !hasExplicitStyle {

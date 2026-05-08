@@ -44,7 +44,7 @@ func DefaultStyle() Style {
 		StrokeWidth: 0.3,
 		FillR:       -1, FillG: -1, FillB: -1,
 		TextR: 0, TextG: 0, TextB: 0,
-		Font: "Helvetica", FontStyle: "", FontSize: 10,
+		Font: FontFamily, FontStyle: "", FontSize: 10,
 	}
 	bodyBold := body
 	bodyBold.FontStyle = "B"
@@ -81,13 +81,13 @@ func DefaultStyle() Style {
 			displaylist.RoleRectBlock:        cluster,
 			displaylist.RoleClassBox:         body,
 			displaylist.RoleClassMember:      body,
-			displaylist.RoleClassAnnotation:  RoleStyle{StrokeR: -1, FillR: -1, TextR: 0, TextG: 0, TextB: 0, Font: "Helvetica", FontStyle: "I", FontSize: 9},
+			displaylist.RoleClassAnnotation:  RoleStyle{StrokeR: -1, FillR: -1, TextR: 0, TextG: 0, TextB: 0, Font: FontFamily, FontStyle: "I", FontSize: 9},
 			displaylist.RoleEntityBox:        body,
 			displaylist.RoleEntityAttribute:  body,
 			displaylist.RoleStateBox:         body,
 			displaylist.RoleStateComposite:   cluster,
-			displaylist.RolePseudostateStart: RoleStyle{StrokeR: 0, StrokeG: 0, StrokeB: 0, StrokeWidth: 0.3, FillR: 0, FillG: 0, FillB: 0, TextR: 0, TextG: 0, TextB: 0, Font: "Helvetica", FontSize: 10},
-			displaylist.RolePseudostateEnd:   RoleStyle{StrokeR: 0, StrokeG: 0, StrokeB: 0, StrokeWidth: 0.3, FillR: 0, FillG: 0, FillB: 0, TextR: 0, TextG: 0, TextB: 0, Font: "Helvetica", FontSize: 10},
+			displaylist.RolePseudostateStart: RoleStyle{StrokeR: 0, StrokeG: 0, StrokeB: 0, StrokeWidth: 0.3, FillR: 0, FillG: 0, FillB: 0, TextR: 0, TextG: 0, TextB: 0, Font: FontFamily, FontSize: 10},
+			displaylist.RolePseudostateEnd:   RoleStyle{StrokeR: 0, StrokeG: 0, StrokeB: 0, StrokeWidth: 0.3, FillR: 0, FillG: 0, FillB: 0, TextR: 0, TextG: 0, TextB: 0, Font: FontFamily, FontSize: 10},
 		},
 	}
 }

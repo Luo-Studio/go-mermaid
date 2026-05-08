@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/luo-studio/go-mermaid/internal/textutil"
 )
 
 // Parse turns Mermaid stateDiagram source into a Diagram.
@@ -56,6 +58,7 @@ func parseBody(d *Diagram, lines []string) error {
 	endCounter := 0
 
 	getOrAddState := func(id string, label string) int {
+		label = textutil.CleanLabel(label)
 		if i, ok := stateIdx[id]; ok {
 			if d.States[i].Label == d.States[i].ID && label != "" {
 				d.States[i].Label = label
@@ -169,7 +172,7 @@ func parseBody(d *Diagram, lines []string) error {
 				getOrAddState(to, "")
 				addStateToCurrent(to)
 			}
-			d.Transitions = append(d.Transitions, Transition{From: from, To: to, Label: m[3]})
+			d.Transitions = append(d.Transitions, Transition{From: from, To: to, Label: textutil.CleanLabel(m[3])})
 		default:
 			return fmt.Errorf("state: line %d: unrecognized statement: %q", li+2, line)
 		}

@@ -3,6 +3,7 @@ package class
 import (
 	"github.com/luo-studio/go-mermaid/autog"
 	"github.com/luo-studio/go-mermaid/displaylist"
+	"github.com/luo-studio/go-mermaid/internal/textutil"
 	"github.com/luo-studio/go-mermaid/layoutopts"
 )
 
@@ -129,7 +130,7 @@ func emitClass(dl *displaylist.DisplayList, c Class, b displaylist.Rect, measure
 		_, ah := measure(c.Annotation, displaylist.RoleClassAnnotation)
 		dl.Items = append(dl.Items, displaylist.Text{
 			Pos:    displaylist.Point{X: b.X + b.W/2, Y: cursorY + ah/2},
-			Lines:  []string{c.Annotation},
+			Lines:  textutil.SplitLabelLines(c.Annotation),
 			Align:  displaylist.AlignCenter,
 			VAlign: displaylist.VAlignMiddle,
 			Role:   displaylist.RoleClassAnnotation,
@@ -139,7 +140,7 @@ func emitClass(dl *displaylist.DisplayList, c Class, b displaylist.Rect, measure
 	_, nh := measure(c.Label, displaylist.RoleClassBox)
 	dl.Items = append(dl.Items, displaylist.Text{
 		Pos:    displaylist.Point{X: b.X + b.W/2, Y: cursorY + nh/2},
-		Lines:  []string{c.Label},
+		Lines:  textutil.SplitLabelLines(c.Label),
 		Align:  displaylist.AlignCenter,
 		VAlign: displaylist.VAlignMiddle,
 		Role:   displaylist.RoleClassBox,
@@ -157,7 +158,7 @@ func emitClass(dl *displaylist.DisplayList, c Class, b displaylist.Rect, measure
 			_, lh := measure(line, displaylist.RoleClassMember)
 			dl.Items = append(dl.Items, displaylist.Text{
 				Pos:    displaylist.Point{X: b.X + 6, Y: cursorY + lh/2},
-				Lines:  []string{line},
+				Lines:  textutil.SplitLabelLines(line),
 				Align:  displaylist.AlignLeft,
 				VAlign: displaylist.VAlignMiddle,
 				Role:   displaylist.RoleClassMember,
@@ -195,7 +196,7 @@ func emitRelationship(dl *displaylist.DisplayList, e autog.Edge, r Relationship)
 		}
 		dl.Items = append(dl.Items, displaylist.Text{
 			Pos:    mid,
-			Lines:  []string{r.Label},
+			Lines:  textutil.SplitLabelLines(r.Label),
 			Align:  displaylist.AlignCenter,
 			VAlign: displaylist.VAlignBottom,
 			Role:   displaylist.RoleEdgeLabel,
@@ -204,7 +205,7 @@ func emitRelationship(dl *displaylist.DisplayList, e autog.Edge, r Relationship)
 	if r.FromCard != "" && len(pts) > 0 {
 		dl.Items = append(dl.Items, displaylist.Text{
 			Pos:    displaylist.Point{X: pts[0].X + 4, Y: pts[0].Y - 2},
-			Lines:  []string{r.FromCard},
+			Lines:  textutil.SplitLabelLines(r.FromCard),
 			Align:  displaylist.AlignLeft,
 			VAlign: displaylist.VAlignBottom,
 			Role:   displaylist.RoleEdgeLabel,
@@ -214,7 +215,7 @@ func emitRelationship(dl *displaylist.DisplayList, e autog.Edge, r Relationship)
 		end := pts[len(pts)-1]
 		dl.Items = append(dl.Items, displaylist.Text{
 			Pos:    displaylist.Point{X: end.X - 4, Y: end.Y - 2},
-			Lines:  []string{r.ToCard},
+			Lines:  textutil.SplitLabelLines(r.ToCard),
 			Align:  displaylist.AlignRight,
 			VAlign: displaylist.VAlignBottom,
 			Role:   displaylist.RoleEdgeLabel,
