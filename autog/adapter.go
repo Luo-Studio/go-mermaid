@@ -101,9 +101,20 @@ func Layout(in Input) (out Output, err error) {
 	}
 	src := upgraph.EdgeSlice(adj)
 
+	// autog only computes top-to-bottom layouts internally. For LR/RL
+	// we rotate the result, but autog's per-rank and inter-rank
+	// spacing uses node Width/Height as it sees them — and after
+	// rotation, what we want as the horizontal axis was autog's
+	// vertical axis. Pre-swap W and H so autog spaces with the
+	// dimensions that match the *post-rotation* axis usage.
+	swapInputDims := in.Direction == DirectionLR || in.Direction == DirectionRL
 	sizes := make(map[string]upgraph.Size, len(in.Nodes))
 	for _, n := range in.Nodes {
-		sizes[n.ID] = upgraph.Size{W: n.Width, H: n.Height}
+		w, h := n.Width, n.Height
+		if swapInputDims {
+			w, h = h, w
+		}
+		sizes[n.ID] = upgraph.Size{W: w, H: h}
 	}
 
 	layout := upstream.Layout(
@@ -218,12 +229,15 @@ func transformDirection(dir Direction, out *Output, maxX, maxY float64) {
 		out.Width = maxX
 		out.Height = maxY
 	case DirectionLR:
-		// Rotate the LAYOUT 90° (swap X and Y of positions) so what was
-		// "down the page" becomes "right across the page". Node W and H
-		// must NOT swap — text doesn't rotate, so a box that was sized
-		// to fit "createTodo" horizontally stays that wide.
+		// Input was given to autog with W/H pre-swapped (so autog's
+		// rank-spacing — which it applies to its Y axis — uses what
+		// the caller calls "Width", giving us the column gap we want
+		// after rotation). Swap (X, Y) of positions and edge points
+		// to rotate the layout 90° CCW, then swap node W/H back so
+		// the output dimensions match what the caller passed in.
 		for i := range out.Nodes {
 			out.Nodes[i].X, out.Nodes[i].Y = out.Nodes[i].Y, out.Nodes[i].X
+			out.Nodes[i].Width, out.Nodes[i].Height = out.Nodes[i].Height, out.Nodes[i].Width
 		}
 		for i := range out.Edges {
 			for j := range out.Edges[i].Points {
@@ -232,9 +246,10 @@ func transformDirection(dir Direction, out *Output, maxX, maxY float64) {
 		}
 		out.Width, out.Height = bboxOf(out)
 	case DirectionRL:
-		// Same axis swap as LR, then mirror X. Width and Height stay.
+		// Same as LR, then mirror X.
 		for i := range out.Nodes {
 			out.Nodes[i].X, out.Nodes[i].Y = out.Nodes[i].Y, out.Nodes[i].X
+			out.Nodes[i].Width, out.Nodes[i].Height = out.Nodes[i].Height, out.Nodes[i].Width
 		}
 		for i := range out.Edges {
 			for j := range out.Edges[i].Points {
@@ -242,7 +257,6 @@ func transformDirection(dir Direction, out *Output, maxX, maxY float64) {
 			}
 		}
 		w, h := bboxOf(out)
-		// flip horizontally
 		for i := range out.Nodes {
 			out.Nodes[i].X = w - out.Nodes[i].X - out.Nodes[i].Width
 		}
